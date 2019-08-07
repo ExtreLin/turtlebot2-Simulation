@@ -1,4 +1,3 @@
-#include "Sn3DCarScan.h"
 #include "mainwindow.h"
 #include <QApplication>
 #include<iostream>

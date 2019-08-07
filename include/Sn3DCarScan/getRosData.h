@@ -8,25 +8,29 @@
 #include<qobject.h>
 #include<QImage>
 #include<sensor_msgs/PointCloud2.h>
+#include<sensor_msgs/CameraInfo.h>
 
 class CKinectListener:public QObject
 {
     Q_OBJECT
 public:
     CKinectListener();
-    image_transport::Subscriber sub ;  
-    image_transport::Subscriber depthSub;
-    ros::Subscriber ptSub;
-    ros::Publisher  runPub;
+    image_transport::Subscriber sub_ ;  
+    image_transport::Subscriber depthSub_;
+    ros::Subscriber ptSub_;
+    ros::Subscriber  camSub_;
+    ros::Publisher  runPub_;
 private:
-    ros::NodeHandle nh;
-    image_transport::ImageTransport it;
-    QVector<QRgb> colorTable;
+    ros::NodeHandle nh_;
+    image_transport::ImageTransport it_;
+    QVector<QRgb> colorTable_;
     void imageCb(const sensor_msgs::ImageConstPtr& msg);
     void depthCb(const sensor_msgs::ImageConstPtr& msg);
     void pointsCb(const sensor_msgs::PointCloud2& msg);
+    void cameraCb(const sensor_msgs::CameraInfo& msg);
 signals:
     void  sigCvImage(const QImage& qImage);
     void  sigCvImageDepth(const QImage& qImage);
+    void  sigCameraInfo(const sensor_msgs::CameraInfo& msg);
 };
 #endif

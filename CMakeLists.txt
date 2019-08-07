@@ -22,8 +22,6 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-find_package( OpenCV REQUIRED COMPONENTS core highgui  imgproc)
-
 find_package(Boost REQUIRED)
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
@@ -31,19 +29,65 @@ else()
     message(FATAL_ERROR "can not find boost !")
 endif()
 
+find_package(CUDA 8.0 REQUIRED)
+IF (CUDA_FOUND)
+    include_directories("${CUDA_INCLUDE_DIRS}")
+    # Optional: Specify the arch of your CUDA hardware here
+    SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O3;-std=c++11 -gencode arch=compute_52,code=sm_52)
+ENDIF ()
+
+SET("OpenCV_DIR" "/opt/opencv/usr/local/share/OpenCV")
+find_package(OpenCV 3.0 REQUIRED)
+if (OpenCV_INCLUDE_DIRS)
+    include_directories("${OpenCV_INCLUDE_DIRS}")
+    link_directories(${OpenCV_DIR}/lib)
+endif (OpenCV_INCLUDE_DIRS)
+
+find_package(Eigen3 REQUIRED)
+if (EIGEN3_INCLUDE_DIR)
+    include_directories("${EIGEN3_INCLUDE_DIR}")
+endif (EIGEN3_INCLUDE_DIR)
+# ------------------------------------------------
+
+SET(CUDA_PROPAGATE_HOST_FLAGS OFF)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Weffc++")
+
 set(HEADERS
-    include/Sn3DCarScan/Sn3DCarScan.h
+    include/Sn3DCarScan/algorithm.h
     include/Sn3DCarScan/getRosData.h
+    include/Sn3DCarScan/data_types.h
+    include/Sn3DCarScan/kinectfusion.h
+    src/cuda/include/common.h
+    src/cuda/include/mc_tables.h
 )
 set(SOURCES
   src/Sn3DCarScan.cpp
   src/mainwindow.cpp
   src/getRosData.cpp
+  src/algorithm.cpp
 )
 
 set(FORMS
   src/mainwindow.ui
 )
+
+set(CUDASOURCES
+  src/kinectfusion.cpp
+  src/pose_estimation.cpp
+  src/surface_measurement.cpp
+)
+
+set(CUDAS
+   src/cuda/extract_pointcloud.cu
+   src/cuda/marching_cubes.cu
+   src/cuda/pose_estimation.cu
+   src/cuda/surface_measurement.cu
+   src/cuda/surface_prediction.cu
+   src/cuda/surface_reconstruction.cu
+)
+
+
+
 
 
 ## System dependencies are found with CMake's conventions
@@ -167,7 +211,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
- add_executable(${PROJECT_NAME}_node ${HEADERS} ${SOURCES} ${FORMS})
+cuda_add_executable(${PROJECT_NAME}_node ${CUDAS} ${CUDASOURCES} ${HEADERS} ${SOURCES} ${FORMS} )
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -179,6 +223,7 @@ include_directories(
 ## same as for the library above
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 ## Specify libraries to link a library or executable target against
+
  target_link_libraries(${PROJECT_NAME}_node
    ${catkin_LIBRARIES}
    ${OpenCV_LIBRARIES}

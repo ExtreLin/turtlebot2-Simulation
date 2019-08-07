@@ -22,8 +22,13 @@ void CKinectListenerThread::slotCarRun(const float& liner,const float& angler)
     speed = geometry_msgs::Twist();
     speed.linear.x=liner;
     speed.angular.z=angler;  
-    kl_->runPub.publish(speed);
+    kl_->runPub_.publish(speed);
 } 
+
+void CKinectListenerThread::slotCameraInfo(const sensor_msgs::CameraInfo& msg)
+{
+    emit sigCameraInfo(msg);
+}
 
 void CKinectListenerThread::run(){
     ros::init(argc_,argv_,"my_Kinect_listener");
@@ -31,76 +36,91 @@ void CKinectListenerThread::run(){
     ros::AsyncSpinner spinner(8); // Use8 threads
     connect(kl_,SIGNAL(sigCvImage(const QImage&)),this,SLOT(slotCvImage(const QImage&)));
     connect(kl_,SIGNAL(sigCvImageDepth(const QImage&)),this,SLOT(slotCvImageDepth(const QImage&)));
+    connect(kl_,SIGNAL(sigCameraInfo(const sensor_msgs::CameraInfo&)),this,SLOT(slotCameraInfo(const sensor_msgs::CameraInfo&)));
     spinner.start();
     ros::waitForShutdown();       
 }
 
 MainWindow::MainWindow(int argc, char** argv, QWidget *parent) :
     QMainWindow(parent),
-    ui(new Ui::MainWindow())
+    ui_(new Ui::MainWindow()),
+    sn3dRebuild(),
+    kLThread_(nullptr),
+    mutex1_(),
+    mutex2_(),
+    isUpKeyDown_(false),
+    isDownKeyDown_(false),
+    isLeftKeyDown_(false),
+    isRightKeyDown_(false)
 {
-    ui->setupUi(this);
-    kLThread = new CKinectListenerThread(argc,argv);
-    connect(kLThread,SIGNAL(sigCvImage(const QImage&)),this,SLOT(slotCvImageRGB(const QImage&)));
-    connect(kLThread,SIGNAL(sigCvImageDepth(const QImage&)),this,SLOT(slotCvImageDepth(const QImage&)));
-    connect(this, SIGNAL(sigCarRun(const float&,const float&)),kLThread,SLOT(slotCarRun(const float&,const float&)));
-    kLThread->start();
+    ui_->setupUi(this);
+    qRegisterMetaType<sensor_msgs::CameraInfo>("sensor_msgs::CameraInfo"); 
+    kLThread_ = new CKinectListenerThread(argc,argv);
+    connect(kLThread_,SIGNAL(sigCvImage(const QImage&)),this,SLOT(slotCvImageRGB(const QImage&)));
+    connect(kLThread_,SIGNAL(sigCvImageDepth(const QImage&)),this,SLOT(slotCvImageDepth(const QImage&)));
+    connect(kLThread_,SIGNAL(sigCameraInfo(const sensor_msgs::CameraInfo&)),this,SLOT(slotCameraInfo(const sensor_msgs::CameraInfo&)));
+    connect(this, SIGNAL(sigCarRun(const float&,const float&)),kLThread_,SLOT(slotCarRun(const float&,const float&)));
+    kLThread_->start();
     this->grabKeyboard();
-    isUpKeyDown = isDownKeyDown = isLeftKeyDown = isRightKeyDown = false;
-    rosLinear = rosAngular = 0;
 }
 
 MainWindow::~MainWindow()
 {
-    kLThread->terminate();
-    delete ui;
-    delete kLThread;
+    kLThread_->terminate();
+    delete ui_;
+    delete kLThread_;
 }
 
 void MainWindow::slotCvImageRGB(const QImage& qImage)
 {
-   mutex1.lock();
-    ui->rgbImageLabel->setPixmap(QPixmap::fromImage(qImage));
-    mutex1.unlock();
+   mutex1_.lock();
+    ui_->rgbImageLabel->setPixmap(QPixmap::fromImage(qImage));
+    mutex1_.unlock();
 }
 
 void MainWindow::slotCvImageDepth(const QImage& qImage)
 {
-    mutex2.lock();
-    ui->depthImageLabel->setPixmap(QPixmap::fromImage(qImage));
-    mutex2.unlock();
+    mutex2_.lock();
+    ui_->depthImageLabel->setPixmap(QPixmap::fromImage(qImage));
+    mutex2_.unlock();
+}
+
+void MainWindow::slotCameraInfo(const sensor_msgs::CameraInfo&msg)
+{
+    sn3dRebuild.setCameraInfo(msg);
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *ev)
 {
+    float rosLinear,rosAngular;
     if(ev ->key()== Qt::Key_Up)
     {
-        isUpKeyDown = true;
-        if(isDownKeyDown == true)
+        isUpKeyDown_ = true;
+        if(isDownKeyDown_ == true)
             rosLinear = 0;
         else
             rosLinear = PER_LINER;
     }
     else if(ev ->key()== Qt::Key_Down)
     {
-        isDownKeyDown = true;
-        if(isUpKeyDown == true)
+        isDownKeyDown_ = true;
+        if(isUpKeyDown_ == true)
             rosLinear = 0;
         else
             rosLinear = -PER_LINER;
     }
     else if(ev ->key()== Qt::Key_Left)
     {
-        isLeftKeyDown = true;
-        if(isRightKeyDown)
+        isLeftKeyDown_ = true;
+        if(isRightKeyDown_)
             rosAngular = 0;
         else
             rosAngular = PER_ANGLER;
     }
     else if(ev ->key()== Qt::Key_Right)
     {
-        isRightKeyDown = true;
-        if(isLeftKeyDown)
+        isRightKeyDown_ = true;
+        if(isLeftKeyDown_)
             rosAngular = 0;
         else
             rosAngular = -PER_ANGLER;
@@ -110,34 +130,35 @@ void MainWindow::keyPressEvent(QKeyEvent *ev)
 
 void MainWindow::keyReleaseEvent(QKeyEvent *ev)
 {
+     float rosLinear,rosAngular;
     if(ev ->key()== Qt::Key_Up)
     {
-        isUpKeyDown = false;
-        if(isDownKeyDown)
+        isUpKeyDown_ = false;
+        if(isDownKeyDown_)
             rosLinear = -PER_LINER;
         else
             rosLinear = 0;
     }
     else if(ev ->key()== Qt::Key_Down)
     {
-        isDownKeyDown = false;
-          if(isUpKeyDown)
+        isDownKeyDown_ = false;
+          if(isUpKeyDown_)
             rosLinear =PER_LINER;
         else
             rosLinear = 0;
     }
     else if(ev ->key()== Qt::Key_Left)
     {
-        isLeftKeyDown = false;
-        if(isRightKeyDown)
+        isLeftKeyDown_ = false;
+        if(isRightKeyDown_)
             rosAngular =  -PER_ANGLER;
         else
             rosAngular = 0;
     }
     else if(ev ->key()== Qt::Key_Right)
     {
-        isRightKeyDown = false;
-           if(isLeftKeyDown)
+        isRightKeyDown_ = false;
+           if(isLeftKeyDown_)
             rosAngular =  PER_ANGLER;
         else
             rosAngular = 0;
