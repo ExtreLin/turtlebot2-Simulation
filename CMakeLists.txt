@@ -7,10 +7,17 @@ add_compile_options(-std=c++11)
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
+
+SET("OpenCV_DIR" "/usr/local/share/OpenCV")
+find_package(OpenCV 3.0 REQUIRED)
+if (OpenCV_INCLUDE_DIRS)
+    include_directories("${OpenCV_INCLUDE_DIRS}")
+    link_directories(${OpenCV_DIR}/lib)
+endif (OpenCV_INCLUDE_DIRS)
+
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
-  cv_bridge
   image_transport
   sensor_msgs
   pcl_conversions
@@ -36,13 +43,6 @@ IF (CUDA_FOUND)
     SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O3;-std=c++11 -gencode arch=compute_52,code=sm_52)
 ENDIF ()
 
-SET("OpenCV_DIR" "/opt/opencv/usr/local/share/OpenCV")
-find_package(OpenCV 3.0 REQUIRED)
-if (OpenCV_INCLUDE_DIRS)
-    include_directories("${OpenCV_INCLUDE_DIRS}")
-    link_directories(${OpenCV_DIR}/lib)
-endif (OpenCV_INCLUDE_DIRS)
-
 find_package(Eigen3 REQUIRED)
 if (EIGEN3_INCLUDE_DIR)
     include_directories("${EIGEN3_INCLUDE_DIR}")
@@ -57,6 +57,8 @@ set(HEADERS
     include/Sn3DCarScan/getRosData.h
     include/Sn3DCarScan/data_types.h
     include/Sn3DCarScan/kinectfusion.h
+    include/cv_bridge.h
+    include/rgb_colors.h
     src/cuda/include/common.h
     src/cuda/include/mc_tables.h
 )
@@ -65,6 +67,8 @@ set(SOURCES
   src/mainwindow.cpp
   src/getRosData.cpp
   src/algorithm.cpp
+  src/cv_bridge.cpp
+  src/rgb_colors.cpp
 )
 
 set(FORMS
@@ -195,6 +199,7 @@ catkin_package(
 include_directories(
 # include
    include/Sn3DCarScan
+   include
   ${catkin_INCLUDE_DIRS}
 )
 

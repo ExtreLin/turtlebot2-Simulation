@@ -3,13 +3,13 @@
 #include "getRosData.h"
 #include<geometry_msgs/Twist.h>
 
-void CKinectListenerThread::slotCvImage(const QImage& qImage)
+void CKinectListenerThread::slotCvImage(const cv_bridge::CvImagePtr qImage)
 {
     emit sigCvImage(qImage);
 }
 
 
-void CKinectListenerThread::slotCvImageDepth(const QImage& qImage)
+void CKinectListenerThread::slotCvImageDepth(const cv_bridge::CvImagePtr qImage)
 {
     emit sigCvImageDepth(qImage);
 }
@@ -34,8 +34,8 @@ void CKinectListenerThread::run(){
     ros::init(argc_,argv_,"my_Kinect_listener");
     kl_ = new  CKinectListener();
     ros::AsyncSpinner spinner(8); // Use8 threads
-    connect(kl_,SIGNAL(sigCvImage(const QImage&)),this,SLOT(slotCvImage(const QImage&)));
-    connect(kl_,SIGNAL(sigCvImageDepth(const QImage&)),this,SLOT(slotCvImageDepth(const QImage&)));
+    connect(kl_,SIGNAL(sigCvImage(const cv_bridge::CvImagePtr)),this,SLOT(slotCvImage(const cv_bridge::CvImagePtr)));
+    connect(kl_,SIGNAL(sigCvImageDepth(const cv_bridge::CvImagePtr )),this,SLOT(slotCvImageDepth(const cv_bridge::CvImagePtr)));
     connect(kl_,SIGNAL(sigCameraInfo(const sensor_msgs::CameraInfo&)),this,SLOT(slotCameraInfo(const sensor_msgs::CameraInfo&)));
     spinner.start();
     ros::waitForShutdown();       
@@ -55,13 +55,18 @@ MainWindow::MainWindow(int argc, char** argv, QWidget *parent) :
 {
     ui_->setupUi(this);
     qRegisterMetaType<sensor_msgs::CameraInfo>("sensor_msgs::CameraInfo"); 
+    qRegisterMetaType<cv_bridge::CvImagePtr>("cv_bridge::CvImagePtr"); 
     kLThread_ = new CKinectListenerThread(argc,argv);
-    connect(kLThread_,SIGNAL(sigCvImage(const QImage&)),this,SLOT(slotCvImageRGB(const QImage&)));
-    connect(kLThread_,SIGNAL(sigCvImageDepth(const QImage&)),this,SLOT(slotCvImageDepth(const QImage&)));
+    connect(kLThread_,SIGNAL(sigCvImage(const cv_bridge::CvImagePtr)),this,SLOT(slotCvImageRGB(const cv_bridge::CvImagePtr)));
+    connect(kLThread_,SIGNAL(sigCvImageDepth(const cv_bridge::CvImagePtr)),this,SLOT(slotCvImageDepth(const cv_bridge::CvImagePtr)));
     connect(kLThread_,SIGNAL(sigCameraInfo(const sensor_msgs::CameraInfo&)),this,SLOT(slotCameraInfo(const sensor_msgs::CameraInfo&)));
     connect(this, SIGNAL(sigCarRun(const float&,const float&)),kLThread_,SLOT(slotCarRun(const float&,const float&)));
     kLThread_->start();
     this->grabKeyboard();
+     for (int k = 0; k<256; ++k)
+	{
+		colorTable_.push_back(qRgb(k, k, k));
+	}  
 }
 
 MainWindow::~MainWindow()
@@ -71,17 +76,22 @@ MainWindow::~MainWindow()
     delete kLThread_;
 }
 
-void MainWindow::slotCvImageRGB(const QImage& qImage)
+void MainWindow::slotCvImageRGB(const cv_bridge::CvImagePtr cv_ptr)
 {
    mutex1_.lock();
-    ui_->rgbImageLabel->setPixmap(QPixmap::fromImage(qImage));
+    QImage Img = QImage((const uchar*)(cv_ptr->image.data), cv_ptr->image.cols, cv_ptr->image.rows, cv_ptr->image.cols * cv_ptr->image.channels(), QImage::Format_RGB888);
+    ui_->rgbImageLabel->setPixmap(QPixmap::fromImage(Img));
     mutex1_.unlock();
 }
 
-void MainWindow::slotCvImageDepth(const QImage& qImage)
+void MainWindow::slotCvImageDepth(const cv_bridge::CvImagePtr cv_ptr)
 {
     mutex2_.lock();
-    ui_->depthImageLabel->setPixmap(QPixmap::fromImage(qImage));
+    cv::Mat dist;
+    cv_ptr->image.convertTo(dist,CV_8U);
+    QImage qImg = QImage((const unsigned char*)(dist.data), dist.cols, dist.rows, dist.cols*dist.channels(), QImage::Format_Indexed8);
+	qImg.setColorTable(colorTable_);//把qImg的颜色按像素点的颜色给设置
+    ui_->depthImageLabel->setPixmap(QPixmap::fromImage(qImg));
     mutex2_.unlock();
 }
 
@@ -93,6 +103,7 @@ void MainWindow::slotCameraInfo(const sensor_msgs::CameraInfo&msg)
 void MainWindow::keyPressEvent(QKeyEvent *ev)
 {
     float rosLinear,rosAngular;
+    rosLinear = rosAngular = 0;
     if(ev ->key()== Qt::Key_Up)
     {
         isUpKeyDown_ = true;

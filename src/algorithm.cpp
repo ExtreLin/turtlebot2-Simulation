@@ -10,7 +10,7 @@ void Sn3DAlgorithmRebuild::setCameraInfo(const   sensor_msgs::CameraInfo& camera
     camera_parameters.principal_y = cameraInfo.K[5];
     camera_parameters.image_width = cameraInfo.width;
     camera_parameters.image_height = cameraInfo.height;
-    pipeline_ = new  kinectfusion::Pipeline(camera_parameters,configuration_);
+   pipeline_ = new  kinectfusion::Pipeline(camera_parameters,configuration_);
 }
 
 

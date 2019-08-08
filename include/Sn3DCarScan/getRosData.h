@@ -4,7 +4,7 @@
  #include <ros/ros.h>
 #include <image_transport/image_transport.h>
 #include <opencv2/highgui/highgui.hpp>
-#include <cv_bridge/cv_bridge.h>
+#include "cv_bridge.h"
 #include<qobject.h>
 #include<QImage>
 #include<sensor_msgs/PointCloud2.h>
@@ -23,14 +23,13 @@ public:
 private:
     ros::NodeHandle nh_;
     image_transport::ImageTransport it_;
-    QVector<QRgb> colorTable_;
     void imageCb(const sensor_msgs::ImageConstPtr& msg);
     void depthCb(const sensor_msgs::ImageConstPtr& msg);
     void pointsCb(const sensor_msgs::PointCloud2& msg);
     void cameraCb(const sensor_msgs::CameraInfo& msg);
 signals:
-    void  sigCvImage(const QImage& qImage);
-    void  sigCvImageDepth(const QImage& qImage);
+    void  sigCvImage(const cv_bridge::CvImagePtr );
+    void  sigCvImageDepth(const cv_bridge::CvImagePtr);
     void  sigCameraInfo(const sensor_msgs::CameraInfo& msg);
 };
 #endif
