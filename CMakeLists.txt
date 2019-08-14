@@ -40,7 +40,6 @@ find_package(CUDA 8.0 REQUIRED)
 IF (CUDA_FOUND)
     include_directories("${CUDA_INCLUDE_DIRS}")
     # Optional: Specify the arch of your CUDA hardware here
-    SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS};-O3;-std=c++11 -gencode arch=compute_52,code=sm_52)
 ENDIF ()
 
 find_package(Eigen3 REQUIRED)
@@ -49,7 +48,6 @@ if (EIGEN3_INCLUDE_DIR)
 endif (EIGEN3_INCLUDE_DIR)
 # ------------------------------------------------
 
-SET(CUDA_PROPAGATE_HOST_FLAGS OFF)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Weffc++")
 
 set(HEADERS
@@ -69,16 +67,13 @@ set(SOURCES
   src/algorithm.cpp
   src/cv_bridge.cpp
   src/rgb_colors.cpp
+  src/kinectfusion.cpp
+  src/pose_estimation.cpp
+  src/surface_measurement.cpp
 )
 
 set(FORMS
   src/mainwindow.ui
-)
-
-set(CUDASOURCES
-  src/kinectfusion.cpp
-  src/pose_estimation.cpp
-  src/surface_measurement.cpp
 )
 
 set(CUDAS
@@ -216,7 +211,11 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-cuda_add_executable(${PROJECT_NAME}_node ${CUDAS} ${CUDASOURCES} ${HEADERS} ${SOURCES} ${FORMS} )
+CUDA_COMPILE(cuda_Target  ${CUDAS} )
+
+add_executable(${PROJECT_NAME}_node ${HEADERS} ${SOURCES} ${FORMS}  ${cuda_Target} )
+set_target_properties(${PROJECT_NAME}_node PROPERTIES LINKER_LANGUAGE ${CUDA_C_OR_CXX})
+SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} " -gencode arch=compute_20,code=sm_20")
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -233,6 +232,7 @@ cuda_add_executable(${PROJECT_NAME}_node ${CUDAS} ${CUDASOURCES} ${HEADERS} ${SO
    ${catkin_LIBRARIES}
    ${OpenCV_LIBRARIES}
    ${Boost_LIBRARIES}
+   ${CUDA_LIBRARIES}
    Qt5::Widgets 
  )
 

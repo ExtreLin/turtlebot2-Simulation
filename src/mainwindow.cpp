@@ -2,6 +2,8 @@
 #include "ui_mainwindow.h"
 #include "getRosData.h"
 #include<geometry_msgs/Twist.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 void CKinectListenerThread::slotCvImage(const cv_bridge::CvImagePtr qImage)
 {
@@ -22,6 +24,8 @@ void CKinectListenerThread::slotCarRun(const float& liner,const float& angler)
     speed = geometry_msgs::Twist();
     speed.linear.x=liner;
     speed.angular.z=angler;  
+    if(isnan(liner)||isnan(angler))
+        return;
     kl_->runPub_.publish(speed);
 } 
 
@@ -41,11 +45,52 @@ void CKinectListenerThread::run(){
     ros::waitForShutdown();       
 }
 
+
+// void CAlgorithimThread::run()
+// {
+//     QThread::exec();
+// }
+
+void CAlgorithimThread::slotCameraInfo(const sensor_msgs::CameraInfo& msg)
+{
+    sn3dRebuild.setCameraInfo(msg);
+}
+
+void CAlgorithimThread::slotMeshIsDone()
+{
+    if(aThread_!=nullptr)
+    {
+        aThread_->quit();
+        aThread_->wait();
+        delete aThread_;
+         aThread_ = nullptr;
+    }
+}
+
+void CAlgorithimThread::slotCvImageDepth(const cv_bridge::CvImagePtr& msg)
+{
+    sn3dRebuild.setCvImageDepth(msg);
+     if(sn3dRebuild.getRGBptr()&& aThread_ == nullptr)
+    {
+        aThread_  = new QThread(this) ;
+        connect(aThread_, SIGNAL(started()),&sn3dRebuild, SLOT(getMesh()));
+        connect(&sn3dRebuild, SIGNAL(finished()),aThread_, SLOT(quit()));
+        connect(aThread_, SIGNAL(finished()),this, SLOT( slotMeshIsDone()));
+        sn3dRebuild.moveToThread(aThread_);
+        aThread_->start();
+    }
+}
+
+void CAlgorithimThread::slotCvImageRGB(const cv_bridge::CvImagePtr& msg)
+{
+    sn3dRebuild.setCvImageRGB(msg);
+}
+
 MainWindow::MainWindow(int argc, char** argv, QWidget *parent) :
     QMainWindow(parent),
     ui_(new Ui::MainWindow()),
-    sn3dRebuild(),
     kLThread_(nullptr),
+    aThread_(nullptr),
     mutex1_(),
     mutex2_(),
     isUpKeyDown_(false),
@@ -57,11 +102,15 @@ MainWindow::MainWindow(int argc, char** argv, QWidget *parent) :
     qRegisterMetaType<sensor_msgs::CameraInfo>("sensor_msgs::CameraInfo"); 
     qRegisterMetaType<cv_bridge::CvImagePtr>("cv_bridge::CvImagePtr"); 
     kLThread_ = new CKinectListenerThread(argc,argv);
+    aThread_  = new  CAlgorithimThread();
     connect(kLThread_,SIGNAL(sigCvImage(const cv_bridge::CvImagePtr)),this,SLOT(slotCvImageRGB(const cv_bridge::CvImagePtr)));
     connect(kLThread_,SIGNAL(sigCvImageDepth(const cv_bridge::CvImagePtr)),this,SLOT(slotCvImageDepth(const cv_bridge::CvImagePtr)));
-    connect(kLThread_,SIGNAL(sigCameraInfo(const sensor_msgs::CameraInfo&)),this,SLOT(slotCameraInfo(const sensor_msgs::CameraInfo&)));
+    connect(kLThread_,SIGNAL(sigCameraInfo(const sensor_msgs::CameraInfo&)),aThread_,SLOT(slotCameraInfo(const sensor_msgs::CameraInfo&)));
+    connect(kLThread_,SIGNAL(sigCvImage(const cv_bridge::CvImagePtr)),aThread_,SLOT(slotCvImageRGB(const cv_bridge::CvImagePtr)));
+    connect(kLThread_,SIGNAL(sigCvImageDepth(const cv_bridge::CvImagePtr)),aThread_,SLOT(slotCvImageDepth(const cv_bridge::CvImagePtr)));
     connect(this, SIGNAL(sigCarRun(const float&,const float&)),kLThread_,SLOT(slotCarRun(const float&,const float&)));
     kLThread_->start();
+    //aThread_->start();
     this->grabKeyboard();
      for (int k = 0; k<256; ++k)
 	{
@@ -74,6 +123,7 @@ MainWindow::~MainWindow()
     kLThread_->terminate();
     delete ui_;
     delete kLThread_;
+    delete aThread_;
 }
 
 void MainWindow::slotCvImageRGB(const cv_bridge::CvImagePtr cv_ptr)
@@ -95,10 +145,6 @@ void MainWindow::slotCvImageDepth(const cv_bridge::CvImagePtr cv_ptr)
     mutex2_.unlock();
 }
 
-void MainWindow::slotCameraInfo(const sensor_msgs::CameraInfo&msg)
-{
-    sn3dRebuild.setCameraInfo(msg);
-}
 
 void MainWindow::keyPressEvent(QKeyEvent *ev)
 {

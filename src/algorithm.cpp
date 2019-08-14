@@ -1,8 +1,8 @@
 #include "algorithm.h"
+#include"qthread.h"
 
 void Sn3DAlgorithmRebuild::setCameraInfo(const   sensor_msgs::CameraInfo& cameraInfo )
 {
-    cameraInfo_= cameraInfo;
     kinectfusion::CameraParameters  camera_parameters;
     camera_parameters.focal_x = cameraInfo.K[0];
     camera_parameters.focal_y = cameraInfo.K[4];
@@ -10,8 +10,66 @@ void Sn3DAlgorithmRebuild::setCameraInfo(const   sensor_msgs::CameraInfo& camera
     camera_parameters.principal_y = cameraInfo.K[5];
     camera_parameters.image_width = cameraInfo.width;
     camera_parameters.image_height = cameraInfo.height;
-   pipeline_ = new  kinectfusion::Pipeline(camera_parameters,configuration_);
+
+    int count;
+    //取得支持Cuda的装置的数目
+    cudaGetDeviceCount(&count);
+    //取得支持Cuda的装置的数目
+    //取得支持Cuda的装置的数目
+
+    //没有符合的硬件
+    if (count == 0) {
+        fprintf(stderr, "There is no device.\n");
+    }
+
+    int i;
+
+    for (i = 0; i < count; i++) {
+        cudaDeviceProp prop;
+        if (cudaGetDeviceProperties(&prop, i) == cudaSuccess) {
+            if (prop.major >= 1) {
+                break;
+            }
+        }
+    }
+
+    if (i == count) {
+        fprintf(stderr, "There is no device supporting CUDA 1.x.\n");
+    }
+    cudaSetDevice(i);
+    pipeline_  =  new  kinectfusion::Pipeline(camera_parameters,configuration_);
+    scanNum = 0;
 }
 
+void Sn3DAlgorithmRebuild::getMesh()
+{
+    mutex1_.lock();
+    pipeline_->process_frame(imgDepth_->image,imgRGB_->image);
+    scanNum ++ ;
+    if(scanNum >500)
+    {
+        auto mesh = pipeline_->extract_mesh();
+       kinectfusion::export_ply("mesh.ply", mesh);
+        do
+        {
+            int a =0;
+        } while (1);
+    }
+    emit  finished();
+    mutex1_.unlock();
+}
+
+
+void Sn3DAlgorithmRebuild::setCvImageRGB(const cv_bridge::CvImagePtr& imgRGB)
+{
+    imgRGB_ = imgRGB;
+}
+
+
+
+void Sn3DAlgorithmRebuild::setCvImageDepth(const cv_bridge::CvImagePtr& imgDepth)
+{
+    imgDepth_ = imgDepth;
+}
 
 

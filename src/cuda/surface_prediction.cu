@@ -61,7 +61,8 @@ namespace kinectfusion {
 
             __global__
             void raycast_tsdf_kernel(const PtrStepSz<short2> tsdf_volume, const PtrStepSz<uchar3> color_volume,
-                                     PtrStepSz<float3> model_vertex, PtrStepSz<float3> model_normal,
+                                     PtrStepSz<float3> model_vertex,
+                                     PtrStepSz<float3> model_normal,
                                      PtrStepSz<uchar3> model_color,
                                      const int3 volume_size, const float voxel_scale,
                                      const CameraParameters cam_parameters,

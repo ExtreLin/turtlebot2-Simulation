@@ -39,7 +39,7 @@ namespace kinectfusion {
                 for (int iteration = 0; iteration < iterations[level]; ++iteration) {
                     Eigen::Matrix<double, 6, 6, Eigen::RowMajor> A {};
                     Eigen::Matrix<double, 6, 1> b {};
-
+                        
                     // Estimate one step on the CPU
                     cuda::estimate_step(current_global_rotation, current_global_translation,
                                         frame_data.vertex_pyramid[level], frame_data.normal_pyramid[level],
@@ -51,8 +51,9 @@ namespace kinectfusion {
 
                     // Solve equation to get alpha, beta and gamma
                     double det = A.determinant();
-                    if (fabs(det) < 100000 /*1e-15*/ || std::isnan(det))
+                    if (fabs(det) < 1e-15 || std::isnan(det))
                         return false;
+                                            
                     Eigen::Matrix<float, 6, 1> result { A.fullPivLu().solve(b).cast<float>() };
                     float alpha = result(0);
                     float beta = result(1);

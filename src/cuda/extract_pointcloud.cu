@@ -3,6 +3,7 @@
 // Author: Christian Diller, git@christian-diller.de
 
 #include "include/common.h"
+#include "iostream"
 
 namespace kinectfusion {
     namespace internal {
@@ -26,14 +27,14 @@ namespace kinectfusion {
                     const float tsdf = static_cast<float>(value.x) * DIVSHORTMAX;
                     if (tsdf == 0 || tsdf <= -0.99f || tsdf >= 0.99f)
                         continue;
-
+                   
                     short2 vx = tsdf_volume.ptr((z) * volume_size.y + y)[x + 1];
                     short2 vy = tsdf_volume.ptr((z) * volume_size.y + y + 1)[x];
                     short2 vz = tsdf_volume.ptr((z + 1) * volume_size.y + y)[x];
 
                     if (vx.y <= 0 || vy.y <= 0 || vz.y <= 0)
                         continue;
-
+                     
                     const float tsdf_x = static_cast<float>(vx.x) * DIVSHORTMAX;
                     const float tsdf_y = static_cast<float>(vy.x) * DIVSHORTMAX;
                     const float tsdf_z = static_cast<float>(vz.x) * DIVSHORTMAX;
@@ -49,12 +50,14 @@ namespace kinectfusion {
                         normal.z() = (tsdf_z - tsdf);
                         if (normal.norm() == 0)
                             continue;
+
                         normal.normalize();
 
                         int count = 0;
                         if (is_surface_x) count++;
                         if (is_surface_y) count++;
                         if (is_surface_z) count++;
+
                         int index = atomicAdd(point_num, count);
 
                         Vec3fda position((static_cast<float>(x) + 0.5f) * voxel_scale,
@@ -104,7 +107,6 @@ namespace kinectfusion {
                 cudaThreadSynchronize();
 
                 cloud_data.download();
-
                 return PointCloud {cloud_data.host_vertices, cloud_data.host_normals,
                                    cloud_data.host_color, cloud_data.host_point_num};
             }

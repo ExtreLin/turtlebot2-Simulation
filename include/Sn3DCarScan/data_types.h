@@ -14,6 +14,7 @@
 #include <cuda_runtime.h>
 #include <opencv2/core/cuda.hpp>
 #include <Eigen/Eigen>
+#include "iostream"
 #pragma GCC diagnostic pop
 #else
 #include <cuda_runtime.h>
@@ -152,14 +153,14 @@ namespace kinectfusion {
 
         // Downloads the model frame for each frame (for visualization purposes). If this is set to true, you can
         // retrieve the frame with Pipeline::get_last_model_frame()
-        bool use_output_frame = { true };
+        bool use_output_frame = { false };
 
         // The truncation distance for both updating and raycasting the TSDF volume
         float truncation_distance { 25.f };
 
         // The distance (in mm) after which to set the depth in incoming depth frames to 0.
         // Can be used to separate an object you want to scan from the background
-        float depth_cutoff_distance { 1000.f };
+        float depth_cutoff_distance { 2000.f };
 
         // The number of pyramid levels to generate for each frame, including the original frame level
         int num_levels { 3 };
@@ -344,8 +345,7 @@ namespace kinectfusion {
                 vertices.download(host_vertices);
                 normals.download(host_normals);
                 color.download(host_color);
-
-                cudaMemcpy(&host_point_num, point_num, sizeof(int), cudaMemcpyDeviceToHost);
+                cudaMemcpy( &host_point_num,point_num,sizeof(int), cudaMemcpyDeviceToHost);
             }
         };
 

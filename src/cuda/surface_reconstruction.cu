@@ -3,6 +3,7 @@
 // Author: Christian Diller, git@christian-diller.de
 
 #include "include/common.h"
+#include "iostream"
 
 using Vec2ida = Eigen::Matrix<int, 2, 1, Eigen::DontAlign>;
 
@@ -15,6 +16,7 @@ namespace kinectfusion {
                                     PtrStepSz<short2> tsdf_volume, PtrStepSz<uchar3> color_volume,
                                     int3 volume_size, float voxel_scale,
                                     CameraParameters cam_params, const float truncation_distance,
+                                    const float depth_cutoff_distance,
                                     Eigen::Matrix<float, 3, 3, Eigen::DontAlign> rotation, Vec3fda translation)
             {
                 const int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -41,7 +43,7 @@ namespace kinectfusion {
 
                     const float depth = depth_image.ptr(uv.y())[uv.x()];
 
-                    if (depth <= 0)
+                    if (depth <= 0||depth>depth_cutoff_distance)
                         continue;
 
                     const Vec3fda xylambda(
@@ -93,6 +95,7 @@ namespace kinectfusion {
             void surface_reconstruction(const cv::cuda::GpuMat& depth_image, const cv::cuda::GpuMat& color_image,
                                         VolumeData& volume,
                                         const CameraParameters& cam_params, const float truncation_distance,
+                                        const float depth_cutoff_distance,
                                         const Eigen::Matrix4f& model_view)
             {
                 const dim3 threads(32, 32);
@@ -103,6 +106,7 @@ namespace kinectfusion {
                         volume.tsdf_volume, volume.color_volume,
                         volume.volume_size, volume.voxel_scale,
                         cam_params, truncation_distance,
+                        depth_cutoff_distance,
                         model_view.block(0, 0, 3, 3), model_view.block(0, 3, 3, 1));
 
                 cudaThreadSynchronize();

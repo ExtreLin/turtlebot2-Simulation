@@ -5,9 +5,9 @@
 #include<geometry_msgs/Twist.h>
 
   CKinectListener::CKinectListener():it_(nh_){
-      sub_ = it_.subscribe("/camera/rgb/image_raw", 1000 ,&CKinectListener::imageCb,this);
+       sub_ = it_.subscribe("/camera/rgb/image_raw", 1000 ,&CKinectListener::imageCb,this);
       depthSub_ = it_.subscribe("/camera/depth/image_raw", 1000 ,&CKinectListener::depthCb,this);  
-      //ptSub = nh.subscribe("/camera/depth/points",1000,&CKinectListener::pointsCb,this);
+      //ptSub_ = nh_.subscribe("/camera/depth/points",1000,&CKinectListener::pointsCb,this);
       camSub_  = nh_.subscribe("/camera/depth/camera_info",1000,&CKinectListener::cameraCb,this);
       runPub_ = nh_.advertise<geometry_msgs::Twist>("/mobile_base/commands/velocity",1);
    } 
@@ -23,6 +23,16 @@
    {   
       cv_bridge::CvImagePtr cv_ptr;    
       cv_ptr = cv_bridge::toCvCopy(msg,sensor_msgs::image_encodings::TYPE_32FC1);   
+      for(int i=0;i<cv_ptr->image.rows;++i)
+      {
+         for(int j=0;j<cv_ptr->image.cols;++j)
+         {
+            if(isnan(cv_ptr->image.at<float>(i,j)))
+                cv_ptr->image.at<float>(i,j) = 0;
+            else
+                cv_ptr->image.at<float>(i,j) = cv_ptr->image.at<float>(i,j) *1000;
+         }
+      }
       emit sigCvImageDepth(cv_ptr);
    }
 

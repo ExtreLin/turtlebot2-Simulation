@@ -36,12 +36,13 @@ namespace kinectfusion {
 
         // STEP 2: Pose estimation
         bool icp_success { true };
-        if (frame_id > 0) { // Do not perform ICP for the very first frame
+        if (frame_id > 0) { // Do not perform ICP for the very first frame      
             icp_success = internal::pose_estimation(current_pose, frame_data, model_data, camera_parameters,
                                                     configuration.num_levels,
                                                     configuration.distance_threshold, configuration.angle_threshold,
                                                     configuration.icp_iterations);
         }
+
         if (!icp_success)
             return false;
 
@@ -50,6 +51,7 @@ namespace kinectfusion {
         // STEP 3: Surface reconstruction
         internal::cuda::surface_reconstruction(frame_data.depth_pyramid[0], frame_data.color_pyramid[0],
                                                volume, camera_parameters, configuration.truncation_distance,
+                                               configuration.depth_cutoff_distance,
                                                current_pose.inverse());
 
         // Step 4: Surface prediction
@@ -62,7 +64,7 @@ namespace kinectfusion {
 
         if (configuration.use_output_frame) // Not using the output will speed up the processing
             model_data.color_pyramid[0].download(last_model_frame);
-
+          
         ++frame_id;
 
         return true;

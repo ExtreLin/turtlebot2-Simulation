@@ -50,6 +50,24 @@ signals:
     void sigCameraInfo(const sensor_msgs::CameraInfo&);
 };
 
+
+class CAlgorithimThread : public QThread{
+    Q_OBJECT
+public:
+    CAlgorithimThread():aThread_(nullptr){}
+public slots:  
+    void slotCameraInfo(const sensor_msgs::CameraInfo&);
+    void slotCvImageRGB(const cv_bridge::CvImagePtr&);
+    void slotCvImageDepth(const cv_bridge::CvImagePtr&);
+    void slotMeshIsDone();
+protected:
+    //virtual void run();
+public:
+        Sn3DAlgorithmRebuild sn3dRebuild;
+private:
+         QThread        *aThread_;
+};
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -62,13 +80,12 @@ protected:
 public slots:
     void slotCvImageRGB(const cv_bridge::CvImagePtr) ;
     void slotCvImageDepth(const cv_bridge::CvImagePtr) ;
-    void slotCameraInfo(const sensor_msgs::CameraInfo&);
 signals:
     void sigCarRun(const float&,const float&);
  private:
     Ui::MainWindow *ui_;
-    Sn3DAlgorithmRebuild sn3dRebuild;
     CKinectListenerThread *kLThread_;
+    CAlgorithimThread         *aThread_;
     QMutex mutex1_;
     QMutex mutex2_;
     bool   isUpKeyDown_, isDownKeyDown_, isLeftKeyDown_, isRightKeyDown_;
