@@ -54,18 +54,17 @@ signals:
 class CAlgorithimThread : public QThread{
     Q_OBJECT
 public:
-    CAlgorithimThread():aThread_(nullptr){}
+    CAlgorithimThread(){
+        moveToThread(this);
+    }
 public slots:  
     void slotCameraInfo(const sensor_msgs::CameraInfo&);
     void slotCvImageRGB(const cv_bridge::CvImagePtr&);
     void slotCvImageDepth(const cv_bridge::CvImagePtr&);
-    void slotMeshIsDone();
 protected:
-    //virtual void run();
+    virtual void run();
 public:
         Sn3DAlgorithmRebuild sn3dRebuild;
-private:
-         QThread        *aThread_;
 };
 
 class MainWindow : public QMainWindow

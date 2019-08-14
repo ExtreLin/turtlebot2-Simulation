@@ -31,8 +31,25 @@ namespace kinectfusion {
                                                                        configuration.depth_cutoff_distance,
                                                                        configuration.bfilter_kernel_size,
                                                                        configuration.bfilter_color_sigma,
-                                                                       configuration.bfilter_spatial_sigma);
+                                                                       configuration.bfilter_spatial_sigma,
+                                                                       configuration.clip_dis,
+                                                                       configuration.depth_min_distance);
         frame_data.color_pyramid[0].upload(color_map);
+
+        // cv::Mat  ccc;
+        // std::ofstream fin("asd.asc");
+        // frame_data.vertex_pyramid[0].download(ccc);
+        // for (size_t i = 0; i < ccc.rows; i++)
+        // {
+        //    for (size_t j = 0; j < ccc.cols; j++)
+        //    {
+        //       Eigen::Vector3f& pt = ccc.at< Eigen::Vector3f>(i,j);
+        //       if(std::isnan( pt.x())||std::isnan( pt.y())||std::isnan( pt.z()))
+        //              continue;
+        //       fin<< pt.x()<<" "<< pt.y()<<" "<<pt.z()<<std::endl;
+        //    }      
+        // }
+        // int a =0;
 
         // STEP 2: Pose estimation
         bool icp_success { true };
@@ -52,6 +69,8 @@ namespace kinectfusion {
         internal::cuda::surface_reconstruction(frame_data.depth_pyramid[0], frame_data.color_pyramid[0],
                                                volume, camera_parameters, configuration.truncation_distance,
                                                configuration.depth_cutoff_distance,
+                                               configuration.depth_min_distance,
+                                               configuration.clip_dis,
                                                current_pose.inverse());
 
         // Step 4: Surface prediction

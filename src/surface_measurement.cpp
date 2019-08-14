@@ -18,6 +18,7 @@ namespace kinectfusion {
 
         namespace cuda { // Forward declare CUDA functions
             void compute_vertex_map(const GpuMat& depth_map, GpuMat& vertex_map, const float depth_cutoff,
+                                    const float min_dis, const float clip_dis,
                                     const CameraParameters cam_params);
             void compute_normal_map(const GpuMat& vertex_map, GpuMat& normal_map);
         }
@@ -25,7 +26,9 @@ namespace kinectfusion {
         FrameData surface_measurement(const cv::Mat_<float>& input_frame,
                                       const CameraParameters& camera_params,
                                       const size_t num_levels, const float depth_cutoff,
-                                      const int kernel_size, const float color_sigma, const float spatial_sigma)
+                                      const int kernel_size, const float color_sigma, 
+                                      const float spatial_sigma, const float clip_dis,const float min_disrance
+                                      )
         {
             // Initialize frame data
             FrameData data(num_levels);
@@ -61,11 +64,11 @@ namespace kinectfusion {
                                           stream);
             }
             stream.waitForCompletion();
-
+            
             // Compute vertex and normal maps
             for (size_t level = 0; level < num_levels; ++level) {
                 cuda::compute_vertex_map(data.smoothed_depth_pyramid[level], data.vertex_pyramid[level],
-                                         depth_cutoff, camera_params.level(level));
+                                         depth_cutoff,min_disrance, clip_dis,camera_params.level(level));
                 cuda::compute_normal_map(data.vertex_pyramid[level], data.normal_pyramid[level]);
             }
 

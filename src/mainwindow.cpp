@@ -46,39 +46,19 @@ void CKinectListenerThread::run(){
 }
 
 
-// void CAlgorithimThread::run()
-// {
-//     QThread::exec();
-// }
+void CAlgorithimThread::run()
+{
+    QThread::exec();
+}
 
 void CAlgorithimThread::slotCameraInfo(const sensor_msgs::CameraInfo& msg)
 {
     sn3dRebuild.setCameraInfo(msg);
 }
 
-void CAlgorithimThread::slotMeshIsDone()
-{
-    if(aThread_!=nullptr)
-    {
-        aThread_->quit();
-        aThread_->wait();
-        delete aThread_;
-         aThread_ = nullptr;
-    }
-}
-
 void CAlgorithimThread::slotCvImageDepth(const cv_bridge::CvImagePtr& msg)
 {
     sn3dRebuild.setCvImageDepth(msg);
-     if(sn3dRebuild.getRGBptr()&& aThread_ == nullptr)
-    {
-        aThread_  = new QThread(this) ;
-        connect(aThread_, SIGNAL(started()),&sn3dRebuild, SLOT(getMesh()));
-        connect(&sn3dRebuild, SIGNAL(finished()),aThread_, SLOT(quit()));
-        connect(aThread_, SIGNAL(finished()),this, SLOT( slotMeshIsDone()));
-        sn3dRebuild.moveToThread(aThread_);
-        aThread_->start();
-    }
 }
 
 void CAlgorithimThread::slotCvImageRGB(const cv_bridge::CvImagePtr& msg)
@@ -110,7 +90,7 @@ MainWindow::MainWindow(int argc, char** argv, QWidget *parent) :
     connect(kLThread_,SIGNAL(sigCvImageDepth(const cv_bridge::CvImagePtr)),aThread_,SLOT(slotCvImageDepth(const cv_bridge::CvImagePtr)));
     connect(this, SIGNAL(sigCarRun(const float&,const float&)),kLThread_,SLOT(slotCarRun(const float&,const float&)));
     kLThread_->start();
-    //aThread_->start();
+    aThread_->start();
     this->grabKeyboard();
      for (int k = 0; k<256; ++k)
 	{

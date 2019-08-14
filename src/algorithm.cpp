@@ -14,9 +14,6 @@ void Sn3DAlgorithmRebuild::setCameraInfo(const   sensor_msgs::CameraInfo& camera
     int count;
     //取得支持Cuda的装置的数目
     cudaGetDeviceCount(&count);
-    //取得支持Cuda的装置的数目
-    //取得支持Cuda的装置的数目
-
     //没有符合的硬件
     if (count == 0) {
         fprintf(stderr, "There is no device.\n");
@@ -46,16 +43,17 @@ void Sn3DAlgorithmRebuild::getMesh()
     mutex1_.lock();
     pipeline_->process_frame(imgDepth_->image,imgRGB_->image);
     scanNum ++ ;
-    if(scanNum >500)
+    if(scanNum >1000)
     {
         auto mesh = pipeline_->extract_mesh();
-       kinectfusion::export_ply("mesh.ply", mesh);
-        do
+        for(int i=0;i<mesh.num_vertices;++i)
         {
-            int a =0;
-        } while (1);
+            uchar3 &color = mesh.colors.at<uchar3>(i);
+            std::swap(color.x,color.z);
+        }
+       kinectfusion::export_ply("mesh.ply", mesh);
+       exit(1);
     }
-    emit  finished();
     mutex1_.unlock();
 }
 
@@ -70,6 +68,8 @@ void Sn3DAlgorithmRebuild::setCvImageRGB(const cv_bridge::CvImagePtr& imgRGB)
 void Sn3DAlgorithmRebuild::setCvImageDepth(const cv_bridge::CvImagePtr& imgDepth)
 {
     imgDepth_ = imgDepth;
+    if(imgRGB_.get())
+        getMesh();
 }
 
 

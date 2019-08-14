@@ -148,8 +148,11 @@ namespace kinectfusion {
         float bfilter_color_sigma { 1.f };
         float bfilter_spatial_sigma { 1.f };
 
+        //用于删除地面
+        float clip_dis {80.f}; 
+
         // The initial distance of the camera from the volume center along the z-axis (in mm)
-        float init_depth { 1000.f };
+        float init_depth { 0.f };
 
         // Downloads the model frame for each frame (for visualization purposes). If this is set to true, you can
         // retrieve the frame with Pipeline::get_last_model_frame()
@@ -160,7 +163,9 @@ namespace kinectfusion {
 
         // The distance (in mm) after which to set the depth in incoming depth frames to 0.
         // Can be used to separate an object you want to scan from the background
-        float depth_cutoff_distance { 2000.f };
+        float depth_cutoff_distance { 5000.f };
+
+        float depth_min_distance {700.f};
 
         // The number of pyramid levels to generate for each frame, including the original frame level
         int num_levels { 3 };

@@ -114,7 +114,8 @@ namespace kinectfusion {
         FrameData surface_measurement(const cv::Mat_<float>& input_frame,
                                       const CameraParameters& camera_params,
                                       const size_t num_levels, const float depth_cutoff,
-                                      const int kernel_size, const float color_sigma, const float spatial_sigma);
+                                      const int kernel_size, const float color_sigma,
+                                    const float spatial_sigma, const float clip_dis,const float depth_min_disrance);
 
 
         /*
@@ -141,6 +142,8 @@ namespace kinectfusion {
                                         const CameraParameters& cam_params,
                                         const float truncation_distance,
                                         const float depth_cutoff_distance,
+                                        const float depth_min_disrance,
+                                        const float clip_dis,
                                         const Eigen::Matrix4f& model_view);
 
 

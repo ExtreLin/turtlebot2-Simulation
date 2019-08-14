@@ -12,7 +12,7 @@ namespace kinectfusion {
 
             __global__
             void kernel_compute_vertex_map(const PtrStepSz<float> depth_map, PtrStep<float3> vertex_map,
-                                           const float depth_cutoff, const CameraParameters cam_params)
+                                           const float depth_cutoff,  const float min_dis  ,const float clip_dis, const CameraParameters cam_params)
             {
                 const int x = blockIdx.x * blockDim.x + threadIdx.x;
                 const int y = blockIdx.y * blockDim.y + threadIdx.y;
@@ -21,12 +21,17 @@ namespace kinectfusion {
                     return;
 
                 float depth_value = depth_map.ptr(y)[x];
-                if (depth_value > depth_cutoff) depth_value = 0.f; // Depth cutoff
+                if (depth_value > depth_cutoff|| depth_value < min_dis) depth_value = 0.f; // Depth cutoff
 
                 Vec3fda vertex(
                         (x - cam_params.principal_x) * depth_value / cam_params.focal_x,
                         (y - cam_params.principal_y) * depth_value / cam_params.focal_y,
                         depth_value);
+                
+                if(vertex.y()>clip_dis)
+                {
+                    vertex = Vec3fda(0,0,0);
+                }
 
                 vertex_map.ptr(y)[x] = make_float3(vertex.x(), vertex.y(), vertex.z());
             }
@@ -64,12 +69,13 @@ namespace kinectfusion {
             }
 
             void compute_vertex_map(const GpuMat& depth_map, GpuMat& vertex_map, const float depth_cutoff,
+                                    const float min_dis,  const float clip_dis,
                                     const CameraParameters cam_params)
             {
                 dim3 threads(32, 32);
                 dim3 blocks((depth_map.cols + threads.x - 1) / threads.x, (depth_map.rows + threads.y - 1) / threads.y);
 
-                kernel_compute_vertex_map << < blocks, threads >> > (depth_map, vertex_map, depth_cutoff, cam_params);
+                kernel_compute_vertex_map << < blocks, threads >> > (depth_map, vertex_map, depth_cutoff, min_dis,clip_dis,cam_params);
 
                 cudaThreadSynchronize();
             }

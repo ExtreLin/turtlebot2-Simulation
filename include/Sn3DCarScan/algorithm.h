@@ -26,10 +26,7 @@ public:
     void setCvImageRGB(const cv_bridge::CvImagePtr&);
     void setCvImageDepth(const cv_bridge::CvImagePtr&);
     bool getRGBptr(){return imgRGB_.get();}
-public slots:
     void getMesh();
-signals:
-    void finished();
 private:
     kinectfusion::GlobalConfiguration configuration_;
     kinectfusion::Pipeline* pipeline_;
