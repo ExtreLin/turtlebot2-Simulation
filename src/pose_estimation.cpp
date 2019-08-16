@@ -51,7 +51,7 @@ namespace kinectfusion {
 
                     // Solve equation to get alpha, beta and gamma
                     double det = A.determinant();
-                    if (fabs(det) < 1e-15 || std::isnan(det))
+                    if (fabs(det) < 10000 || std::isnan(det))
                         return false;
                                             
                     Eigen::Matrix<float, 6, 1> result { A.fullPivLu().solve(b).cast<float>() };

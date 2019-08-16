@@ -43,7 +43,8 @@ void Sn3DAlgorithmRebuild::getMesh()
     mutex1_.lock();
     pipeline_->process_frame(imgDepth_->image,imgRGB_->image);
     scanNum ++ ;
-    if(scanNum >1000)
+    
+    if(scanNum >2000)
     {
         auto mesh = pipeline_->extract_mesh();
         for(int i=0;i<mesh.num_vertices;++i)

@@ -149,7 +149,7 @@ namespace kinectfusion {
         float bfilter_spatial_sigma { 1.f };
 
         //用于删除地面
-        float clip_dis {80.f}; 
+        float clip_dis {100.f}; 
 
         // The initial distance of the camera from the volume center along the z-axis (in mm)
         float init_depth { 0.f };

@@ -22,7 +22,7 @@ namespace kinectfusion {
         current_pose(1, 3) = _configuration.volume_size.y / 2 * _configuration.voxel_scale;
         current_pose(2, 3) = _configuration.volume_size.z / 2 * _configuration.voxel_scale - _configuration.init_depth;
     }
-
+    int xxx=0;
     bool Pipeline::process_frame(const cv::Mat_<float>& depth_map, const cv::Mat_<cv::Vec3b>& color_map)
     {
         // STEP 1: Surface measurement
@@ -35,21 +35,32 @@ namespace kinectfusion {
                                                                        configuration.clip_dis,
                                                                        configuration.depth_min_distance);
         frame_data.color_pyramid[0].upload(color_map);
-
-        // cv::Mat  ccc;
-        // std::ofstream fin("asd.asc");
-        // frame_data.vertex_pyramid[0].download(ccc);
-        // for (size_t i = 0; i < ccc.rows; i++)
+        // if(xxx%20 == 0)
         // {
-        //    for (size_t j = 0; j < ccc.cols; j++)
-        //    {
-        //       Eigen::Vector3f& pt = ccc.at< Eigen::Vector3f>(i,j);
-        //       if(std::isnan( pt.x())||std::isnan( pt.y())||std::isnan( pt.z()))
-        //              continue;
-        //       fin<< pt.x()<<" "<< pt.y()<<" "<<pt.z()<<std::endl;
-        //    }      
+        //     std::ofstream fin(std::to_string(xxx/20)+ ".asc");
+        //     cv::Mat  ccc;
+        //     frame_data.depth_pyramid[0].download(ccc);
+        //     for (size_t i = 0; i < ccc.rows; i++)
+        //     {
+        //        for (size_t j = 0; j < ccc.cols; j++)
+        //        {
+        //          float& pt = ccc.at< float>(i,j);
+        //          fin<< j<<" "<< i<<" "<< pt<<std::endl;   
+        //        }      
+        //     }
+
+        //      std::ofstream fin2(std::to_string(xxx/20)+ "_vert.asc");
+        //     frame_data.vertex_pyramid[0].download(ccc);
+        //     for (size_t i = 0; i < ccc.rows; i++)
+        //     {
+        //        for (size_t j = 0; j < ccc.cols; j++)
+        //        {
+        //          Eigen::Vector3f& pt = ccc.at< Eigen::Vector3f>(i,j);
+        //          fin2<<pt.x()<<" "<< pt.y()<<" "<< pt.z()<<std::endl;   
+        //        }      
+        //     }
         // }
-        // int a =0;
+        // xxx++;
 
         // STEP 2: Pose estimation
         bool icp_success { true };

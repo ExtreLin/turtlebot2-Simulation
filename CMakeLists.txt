@@ -50,44 +50,13 @@ endif (EIGEN3_INCLUDE_DIR)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Weffc++")
 
-set(HEADERS
-    include/Sn3DCarScan/algorithm.h
-    include/Sn3DCarScan/getRosData.h
-    include/Sn3DCarScan/data_types.h
-    include/Sn3DCarScan/kinectfusion.h
-    include/cv_bridge.h
-    include/rgb_colors.h
-    src/cuda/include/common.h
-    src/cuda/include/mc_tables.h
-)
-set(SOURCES
-  src/Sn3DCarScan.cpp
-  src/mainwindow.cpp
-  src/getRosData.cpp
-  src/algorithm.cpp
-  src/cv_bridge.cpp
-  src/rgb_colors.cpp
-  src/kinectfusion.cpp
-  src/pose_estimation.cpp
-  src/surface_measurement.cpp
-)
-
+# find all sources files
+file(GLOB_RECURSE HEADERS  ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h)
+file(GLOB_RECURSE SOURCES  ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
+file(GLOB_RECURSE CUDAS  ${CMAKE_CURRENT_SOURCE_DIR}/cuda/*.cu)
 set(FORMS
   src/mainwindow.ui
 )
-
-set(CUDAS
-   src/cuda/extract_pointcloud.cu
-   src/cuda/marching_cubes.cu
-   src/cuda/pose_estimation.cu
-   src/cuda/surface_measurement.cu
-   src/cuda/surface_prediction.cu
-   src/cuda/surface_reconstruction.cu
-)
-
-
-
-
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
