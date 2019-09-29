@@ -167,7 +167,7 @@ namespace kinectfusion {
             }
 
             __global__
-            void generate_triangles_kernel(const PtrStep<short2> tsdf_volume, const int3 volume_size, const float voxel_size,
+            void generate_triangles_kernel(const PtrStep<short2> tsdf_volume, PtrStepSz<short> uncertainty_volume,  const int3 volume_size, const float voxel_size,
                                            const PtrStepSz<int> occupied_voxels, const PtrStepSz<int> vertex_offsets,
                                            const PtrStep<int> number_vertices_table, const PtrStep<int> triangle_table,
                                            PtrStep<float3> triangle_buffer)
@@ -229,6 +229,8 @@ namespace kinectfusion {
                     triangle_buffer.ptr(0)[index + 2] = make_float3(vertex_list[v3][threadIdx.x].x,
                                                                     vertex_list[v3][threadIdx.x].y,
                                                                     vertex_list[v3][threadIdx.x].z);
+
+                    uncertainty_volume.ptr(z * volume_size.y + y)[x] = 1;
                 }
             }
 
@@ -310,7 +312,7 @@ namespace kinectfusion {
                 dim3 grid(min(blocks_num, 65536), static_cast<unsigned>(std::ceil(blocks_num / 65536)));
                 grid.y = 1;
 
-                generate_triangles_kernel<<<grid, block>>> (volume.tsdf_volume,
+                generate_triangles_kernel<<<grid, block>>> (volume.tsdf_volume,volume.uncertainty_volume,
                         volume.volume_size, volume.voxel_scale,
                         mesh_data.occupied_voxel_ids, mesh_data.vertex_offsets,
                         number_vertices_table, triangle_table,

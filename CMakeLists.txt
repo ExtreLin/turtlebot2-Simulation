@@ -45,10 +45,19 @@ ENDIF ()
 find_package(Eigen3 REQUIRED)
 if (EIGEN3_INCLUDE_DIR)
     include_directories("${EIGEN3_INCLUDE_DIR}")
-endif (EIGEN3_INCLUDE_DIR)
+endif ()
+
+find_package(OpenMP QUIET)
+if(OPENMP_FOUND)
+
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}  ${OpenMP_C_FLAGS}")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  ${OpenMP_CXX_FLAGS}")
+    add_definitions(-D_OPENMP)
+endif()
+
 # ------------------------------------------------
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Weffc++")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Weffc++")
 
 # find all sources files
 file(GLOB_RECURSE HEADERS  ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h)
@@ -57,6 +66,7 @@ file(GLOB_RECURSE CUDAS  ${CMAKE_CURRENT_SOURCE_DIR}/cuda/*.cu)
 set(FORMS
   src/mainwindow.ui
 )
+
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -163,6 +173,8 @@ catkin_package(
 include_directories(
 # include
    include/Sn3DCarScan
+   include/ros_file
+   include/fusion
    include
   ${catkin_INCLUDE_DIRS}
 )
@@ -202,6 +214,7 @@ SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} " -gencode arch=compute_20,code=sm_20")
    ${OpenCV_LIBRARIES}
    ${Boost_LIBRARIES}
    ${CUDA_LIBRARIES}
+   ${FLANN_LIBRARIES}
    Qt5::Widgets 
  )
 

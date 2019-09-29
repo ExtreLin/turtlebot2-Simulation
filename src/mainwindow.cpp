@@ -1,70 +1,7 @@
 #include "mainwindow.h"
 #include "ui_mainwindow.h"
-#include "getRosData.h"
-#include<geometry_msgs/Twist.h>
 #include <sys/types.h>
 #include <unistd.h>
-
-void CKinectListenerThread::slotCvImage(const cv_bridge::CvImagePtr qImage)
-{
-    emit sigCvImage(qImage);
-}
-
-
-void CKinectListenerThread::slotCvImageDepth(const cv_bridge::CvImagePtr qImage)
-{
-    emit sigCvImageDepth(qImage);
-}
-
-void CKinectListenerThread::slotCarRun(const float& liner,const float& angler)
-{
-   if(kl_ == nullptr)
-        return;
-    geometry_msgs::Twist speed;
-    speed = geometry_msgs::Twist();
-    speed.linear.x=liner;
-    speed.angular.z=angler;  
-    if(isnan(liner)||isnan(angler))
-        return;
-    kl_->runPub_.publish(speed);
-} 
-
-void CKinectListenerThread::slotCameraInfo(const sensor_msgs::CameraInfo& msg)
-{
-    emit sigCameraInfo(msg);
-}
-
-void CKinectListenerThread::run(){
-    ros::init(argc_,argv_,"my_Kinect_listener");
-    kl_ = new  CKinectListener();
-    ros::AsyncSpinner spinner(8); // Use8 threads
-    connect(kl_,SIGNAL(sigCvImage(const cv_bridge::CvImagePtr)),this,SLOT(slotCvImage(const cv_bridge::CvImagePtr)));
-    connect(kl_,SIGNAL(sigCvImageDepth(const cv_bridge::CvImagePtr )),this,SLOT(slotCvImageDepth(const cv_bridge::CvImagePtr)));
-    connect(kl_,SIGNAL(sigCameraInfo(const sensor_msgs::CameraInfo&)),this,SLOT(slotCameraInfo(const sensor_msgs::CameraInfo&)));
-    spinner.start();
-    ros::waitForShutdown();       
-}
-
-
-void CAlgorithimThread::run()
-{
-    QThread::exec();
-}
-
-void CAlgorithimThread::slotCameraInfo(const sensor_msgs::CameraInfo& msg)
-{
-    sn3dRebuild.setCameraInfo(msg);
-}
-
-void CAlgorithimThread::slotCvImageDepth(const cv_bridge::CvImagePtr& msg)
-{
-    sn3dRebuild.setCvImageDepth(msg);
-}
-
-void CAlgorithimThread::slotCvImageRGB(const cv_bridge::CvImagePtr& msg)
-{
-    sn3dRebuild.setCvImageRGB(msg);
-}
 
 MainWindow::MainWindow(int argc, char** argv, QWidget *parent) :
     QMainWindow(parent),
