@@ -1,15 +1,20 @@
-#include<getRosData.h>
+#include"kinectListener.h"
 #include <pcl/PCLPointCloud2.h>
 #include <pcl/conversions.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include<geometry_msgs/Twist.h>
+#include <tf/transform_listener.h>
+#include<geometry_msgs/PoseStamped.h>
+
 
   CKinectListener::CKinectListener():it_(nh_){
        sub_ = it_.subscribe("/camera/rgb/image_raw", 1000 ,&CKinectListener::imageCb,this);
       depthSub_ = it_.subscribe("/camera/depth/image_raw", 1000 ,&CKinectListener::depthCb,this);  
       //ptSub_ = nh_.subscribe("/camera/depth/points",1000,&CKinectListener::pointsCb,this);
       camSub_  = nh_.subscribe("/camera/depth/camera_info",1000,&CKinectListener::cameraCb,this);
+
       runPub_ = nh_.advertise<geometry_msgs::Twist>("/mobile_base/commands/velocity",1);
+      //tfPub_ = nh_.advertise<geometry_msgs::PoseStamped>()
    } 
 
   void CKinectListener::imageCb(const sensor_msgs::ImageConstPtr& msg)

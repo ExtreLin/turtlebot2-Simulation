@@ -2,10 +2,11 @@
 // Author: Christian Diller, git@christian-diller.de
 
 #include <kinectfusion.h>
-
 #include <fstream>
+#include<flannRadiusSearch.h>
 
 using cv::cuda::GpuMat;
+using Vec3fda = Eigen::Matrix<float, 3, 1, Eigen::DontAlign>;
 
 namespace kinectfusion {
 
@@ -22,7 +23,7 @@ namespace kinectfusion {
         current_pose(1, 3) = _configuration.volume_size.y / 2 * _configuration.voxel_scale;
         current_pose(2, 3) = _configuration.volume_size.z / 2 * _configuration.voxel_scale - _configuration.init_depth;
     }
-    int xxx=0;
+ 
     bool Pipeline::process_frame(const cv::Mat_<float>& depth_map, const cv::Mat_<cv::Vec3b>& color_map)
     {
         // STEP 1: Surface measurement
@@ -35,33 +36,7 @@ namespace kinectfusion {
                                                                        configuration.clip_dis,
                                                                        configuration.depth_min_distance);
         frame_data.color_pyramid[0].upload(color_map);
-        // if(xxx%20 == 0)
-        // {
-        //     std::ofstream fin(std::to_string(xxx/20)+ ".asc");
-        //     cv::Mat  ccc;
-        //     frame_data.depth_pyramid[0].download(ccc);
-        //     for (size_t i = 0; i < ccc.rows; i++)
-        //     {
-        //        for (size_t j = 0; j < ccc.cols; j++)
-        //        {
-        //          float& pt = ccc.at< float>(i,j);
-        //          fin<< j<<" "<< i<<" "<< pt<<std::endl;   
-        //        }      
-        //     }
-
-        //      std::ofstream fin2(std::to_string(xxx/20)+ "_vert.asc");
-        //     frame_data.vertex_pyramid[0].download(ccc);
-        //     for (size_t i = 0; i < ccc.rows; i++)
-        //     {
-        //        for (size_t j = 0; j < ccc.cols; j++)
-        //        {
-        //          Eigen::Vector3f& pt = ccc.at< Eigen::Vector3f>(i,j);
-        //          fin2<<pt.x()<<" "<< pt.y()<<" "<< pt.z()<<std::endl;   
-        //        }      
-        //     }
-        // }
-        // xxx++;
-
+        
         // STEP 2: Pose estimation
         bool icp_success { true };
         if (frame_id > 0) { // Do not perform ICP for the very first frame      
@@ -83,6 +58,9 @@ namespace kinectfusion {
                                                configuration.depth_min_distance,
                                                configuration.clip_dis,
                                                current_pose.inverse());
+        
+
+        //
 
         // Step 4: Surface prediction
         for (int level = 0; level < configuration.num_levels; ++level)
@@ -94,8 +72,41 @@ namespace kinectfusion {
 
         if (configuration.use_output_frame) // Not using the output will speed up the processing
             model_data.color_pyramid[0].download(last_model_frame);
+            
           
         ++frame_id;
+        internal::cuda::uncertainty_map(volume, current_pose);
+        internal::cuda::uncertainty_map_empty(frame_data.depth_pyramid[0], 
+          configuration.depth_cutoff_distance,camera_parameters,
+          volume,  current_pose);
+
+        if(frame_id == 500)
+        {
+            extract_mesh();
+            get_uncertainty_points();
+            cv::Mat host_uncertainty_map;
+            volume.uncertainty_volume.download(host_uncertainty_map);
+            get_validness_map(host_uncertainty_map, volume.volume_size);
+            std::ofstream oput("map.asc");
+            std::vector<Eigen::Vector3f> pts;
+            for (size_t i = 0; i < volume.volume_size.x; i++)
+           {
+               for (size_t j = 0; j < volume.volume_size.y; j++)
+               {
+                   for (size_t k = 0; k < volume.volume_size.z; k++)
+                   {
+                       short  outValue =  host_uncertainty_map.at<short>(k*volume.volume_size.y + j,i);
+                        if(outValue==3)
+                            pts.push_back(Eigen::Vector3f(i,j,k));
+                           // oput << i<<" "<<j<<" "<<k<<std::endl;           
+                    }        
+                }           
+            }
+            CommonTools::FlannRadiusSearch<float> frs(pts);
+            
+            oput.close();
+            internal::cuda::clear_candidate_points(volume);
+        }
 
         return true;
     }
@@ -126,6 +137,11 @@ namespace kinectfusion {
         SurfaceMesh surface_mesh = internal::cuda::marching_cubes(volume, configuration.triangles_buffer_size);
         return surface_mesh;
     }
+
+     std::vector<Eigen::Vector3f> Pipeline:: get_uncertainty_points() const
+     {
+         return internal::cuda::get_uncertainty_points_cuda(volume, camera_parameters);
+     }
 
     void export_ply(const std::string& filename, const PointCloud& point_cloud)
     {
@@ -188,4 +204,35 @@ namespace kinectfusion {
             file_out << 3 << " " << t_idx + 1 << " " << t_idx << " " << t_idx + 2 << std::endl;
         }
     }
+
+     cv::Mat get_validness_map(const cv::Mat& host_uncertainty_map, const int3& volume_size)
+     {
+        cv::Mat validness_map(volume_size.x,volume_size.y, CV_8UC1);
+
+         //std::ofstream oput("map1.asc");
+         int halfY= volume_size.y/2;
+        for (size_t i = 0; i < volume_size.x; i++)
+        {
+            for (size_t k = 0; k < volume_size.z; k++)
+            {
+                bool needInsert = false;
+                for (size_t j = 0; j < volume_size.y; j++)
+                {
+                    short  outValue =  host_uncertainty_map.at<short>(k*volume_size.y + j,i);
+                    if(outValue==0&& abs(int(j)-halfY)  < 3)
+                        needInsert = true;
+                    else if(outValue>0)
+                    {
+                        needInsert = false;
+                        break;
+                    }
+                }    
+                validness_map.at<char>(i,k) =  needInsert? 1:0;
+                //if( validness_map.at<char>(i,k))
+                    //oput << i<<" "<<0 <<" "<<k<<std::endl;    
+            }           
+        }
+        //oput.close();
+        int a =0;
+     }
 }
