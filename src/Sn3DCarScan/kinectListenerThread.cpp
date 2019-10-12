@@ -3,10 +3,13 @@
 #include <ros/ros.h>
 #include <move_base_msgs/MoveBaseAction.h>
 #include <actionlib/client/simple_action_client.h>
-#include <tf/transform_datatypes.h>
 
 typedef actionlib::SimpleActionClient<move_base_msgs::MoveBaseAction> MoveBaseClient;
 
+const tf::StampedTransform& CKinectListenerThread::get_current_rt()
+{
+    return stamped_transform_;
+}
 
 void CKinectListenerThread::slotCvImage(const cv_bridge::CvImagePtr qImage)
 {
@@ -25,12 +28,11 @@ void CKinectListenerThread::slotCarRun(const float& liner,const float& angler)
         return;
     geometry_msgs::Twist speed;
     speed = geometry_msgs::Twist();
-    speed.linear.x=liner;
-    speed.angular.z=angler;  
+    speed.linear.x = liner;
+    speed.angular.z = angler;  
     if(isnan(liner)||isnan(angler))
        return;
-    tf::StampedTransform stamped_transform;   //定义存放变换关系的变量
-    kl_->tflistener_ .lookupTransform("odom", "base_footprint",ros::Time(0), stamped_transform);       
+    kl_->tflistener_ .lookupTransform("odom", "base_footprint",ros::Time(0), stamped_transform_);       
     kl_->runPub_.publish(speed);   
 } 
 

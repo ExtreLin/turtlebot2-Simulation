@@ -3,6 +3,7 @@
 
 #include<QThread>
 #include"kinectListener.h"
+#include <tf/transform_datatypes.h>
 
 class CKinectListenerThread : public QThread{
     Q_OBJECT
@@ -21,12 +22,14 @@ public:
          if(kl_!=nullptr)
             delete kl_;
     }
+    const tf::StampedTransform& get_current_rt();
 protected:
     virtual void run();
 private:
     int argc_;
     char** argv_;
     CKinectListener* kl_;
+    tf::StampedTransform stamped_transform_;   //定义存放变换关系的变量
 public slots:
     void slotCvImage(const cv_bridge::CvImagePtr );
     void slotCvImageDepth(const cv_bridge::CvImagePtr );

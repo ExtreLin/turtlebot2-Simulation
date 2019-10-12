@@ -4,6 +4,8 @@
 #include <kinectfusion.h>
 #include <fstream>
 #include<flannRadiusSearch.h>
+#include<cuda/include/common.h>
+#include<nextBestView.h>
 
 using cv::cuda::GpuMat;
 using Vec3fda = Eigen::Matrix<float, 3, 1, Eigen::DontAlign>;
@@ -82,30 +84,22 @@ namespace kinectfusion {
 
         if(frame_id == 500)
         {
-            extract_mesh();
+            SurfaceMesh surface_mesh =  extract_mesh();
             get_uncertainty_points();
             cv::Mat host_uncertainty_map;
+            cv::Mat host_tsdf_volume;
             volume.uncertainty_volume.download(host_uncertainty_map);
-            get_validness_map(host_uncertainty_map, volume.volume_size);
-            std::ofstream oput("map.asc");
-            std::vector<Eigen::Vector3f> pts;
-            for (size_t i = 0; i < volume.volume_size.x; i++)
-           {
-               for (size_t j = 0; j < volume.volume_size.y; j++)
-               {
-                   for (size_t k = 0; k < volume.volume_size.z; k++)
-                   {
-                       short  outValue =  host_uncertainty_map.at<short>(k*volume.volume_size.y + j,i);
-                        if(outValue==3)
-                            pts.push_back(Eigen::Vector3f(i,j,k));
-                           // oput << i<<" "<<j<<" "<<k<<std::endl;           
-                    }        
-                }           
-            }
-            CommonTools::FlannRadiusSearch<float> frs(pts);
-            
-            oput.close();
+            volume.tsdf_volume.download(host_tsdf_volume);
+
+            cv::Mat validness_map = nextbestview::get_validness_map(host_uncertainty_map, volume.volume_size);
+            //std::ofstream oput("map.asc");
+            std::vector<std::pair<Eigen::Vector3i, float>> values;
+            nextbestview::get_uncertainty_priority_queue(host_uncertainty_map, host_tsdf_volume ,volume.volume_size,values);
+            Eigen::Vector3f nbv =  nextbestview::find_next_best_view(validness_map, host_uncertainty_map,
+                values, surface_mesh, poses.front().inverse(), volume.volume_size, volume.voxel_scale);
+           // oput.close();
             internal::cuda::clear_candidate_points(volume);
+
         }
 
         return true;
@@ -204,35 +198,4 @@ namespace kinectfusion {
             file_out << 3 << " " << t_idx + 1 << " " << t_idx << " " << t_idx + 2 << std::endl;
         }
     }
-
-     cv::Mat get_validness_map(const cv::Mat& host_uncertainty_map, const int3& volume_size)
-     {
-        cv::Mat validness_map(volume_size.x,volume_size.y, CV_8UC1);
-
-         //std::ofstream oput("map1.asc");
-         int halfY= volume_size.y/2;
-        for (size_t i = 0; i < volume_size.x; i++)
-        {
-            for (size_t k = 0; k < volume_size.z; k++)
-            {
-                bool needInsert = false;
-                for (size_t j = 0; j < volume_size.y; j++)
-                {
-                    short  outValue =  host_uncertainty_map.at<short>(k*volume_size.y + j,i);
-                    if(outValue==0&& abs(int(j)-halfY)  < 3)
-                        needInsert = true;
-                    else if(outValue>0)
-                    {
-                        needInsert = false;
-                        break;
-                    }
-                }    
-                validness_map.at<char>(i,k) =  needInsert? 1:0;
-                //if( validness_map.at<char>(i,k))
-                    //oput << i<<" "<<0 <<" "<<k<<std::endl;    
-            }           
-        }
-        //oput.close();
-        int a =0;
-     }
 }

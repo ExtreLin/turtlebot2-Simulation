@@ -107,9 +107,6 @@ namespace kinectfusion {
      */
     void export_ply(const std::string& filename, const SurfaceMesh& surface_mesh);
 
-
-    cv::Mat get_validness_map(const cv::Mat& host_uncertainty_map, const int3& volume_size);
-
     namespace internal {
 
         /*

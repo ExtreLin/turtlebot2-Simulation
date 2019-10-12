@@ -54,8 +54,17 @@ void MainWindow::slotCvImageRGB(const cv_bridge::CvImagePtr cv_ptr)
 void MainWindow::slotCvImageDepth(const cv_bridge::CvImagePtr cv_ptr)
 {
     mutex2_.lock();
-    cv::Mat dist;
-    cv_ptr->image.convertTo(dist,CV_8U);
+    cv::Mat dist(cv_ptr->image.rows, cv_ptr->image.cols,CV_8U);
+
+#pragma omp parallel for schedule(dynamic)
+    for(int i=0;i<cv_ptr->image.rows;++i)
+    {
+        for(int j=0;j<cv_ptr->image.cols;++j)
+        {
+            dist.at<unsigned char>(i,j) = cv_ptr->image.at<float>(i,j) /5000 * 256;
+        }
+    }
+    //cv_ptr->image.convertTo(dist,CV_8U);
     QImage qImg = QImage((const unsigned char*)(dist.data), dist.cols, dist.rows, dist.cols*dist.channels(), QImage::Format_Indexed8);
 	qImg.setColorTable(colorTable_);//把qImg的颜色按像素点的颜色给设置
     ui_->depthImageLabel->setPixmap(QPixmap::fromImage(qImg));

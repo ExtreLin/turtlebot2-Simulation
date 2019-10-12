@@ -21,8 +21,7 @@ namespace CommonTools
 
     void set_points(const std::vector<Eigen::Matrix<T,3,1>>&);
     void set_params(const  flann::SearchParams&  params);
-    void knn_search(std::vector<int>& indices, std::vector<T>& dists,size_t knn);
-    void radius_search(const Eigen::Matrix<T,3,1>& pt, std::vector<int>& indices, std::vector<T>& dists, T radius);
+    void radius_search(const Eigen::Matrix<T,3,1>& pt, std::vector<int>& indices, std::vector<T>& dists, float radius);
 
     private:
         flann::Index<flann::L2_Simple<T>>   *_index;
@@ -35,9 +34,7 @@ namespace CommonTools
     {
          set_points(pts);
         _searchParams.sorted = false;
-#ifdef _OPENMP
         _searchParams.cores  = omp_get_max_threads();
-#endif
     }
 
     template<typename T>
@@ -55,16 +52,15 @@ namespace CommonTools
      }
 
      template<typename T>
-     void FlannRadiusSearch<T>::knn_search(std::vector<int>& indices, std::vector<T>& dists,size_t knn )
-     {
-         _index->knnSearch(_data, indices, dists, knn, _searchParams);
-     }
-
-     template<typename T>
      void FlannRadiusSearch<T>::radius_search(
-         const Eigen::Matrix<T,3,1>& pt, std::vector<int>& indices, std::vector<T>& dists, T radius
+         const Eigen::Matrix<T,3,1>& pt, std::vector<int>& indices, std::vector<T>& dists, float radius
      )
      {
-         _index->radiusSearch(pt, indices, dists, radius, _searchParams);
+        flann::Matrix<T> data = flann::Matrix<T>(const_cast<T*>(&(pt[0])), 1, 3); 
+        std::vector<std::vector<int>> vec_indices;
+        std::vector<std::vector<T>>  vec_dists;
+        _index->radiusSearch(data, vec_indices, vec_dists, radius, _searchParams);
+        indices = vec_indices[0];
+        dists  = vec_dists[0];
      }
 }

@@ -28,6 +28,7 @@
    {   
       cv_bridge::CvImagePtr cv_ptr;    
       cv_ptr = cv_bridge::toCvCopy(msg,sensor_msgs::image_encodings::TYPE_32FC1);   
+#pragma omp parallel for schedule(dynamic)
       for(int i=0;i<cv_ptr->image.rows;++i)
       {
          for(int j=0;j<cv_ptr->image.cols;++j)
