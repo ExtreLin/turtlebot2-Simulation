@@ -140,6 +140,7 @@ namespace kinectfusion {
              */
             void surface_reconstruction(const cv::cuda::GpuMat& depth_image,
                                         const cv::cuda::GpuMat& color_image,
+                                        const cv::cuda::GpuMat& dotValue_image,
                                         VolumeData& volume,
                                         const CameraParameters& cam_params,
                                         const float truncation_distance,

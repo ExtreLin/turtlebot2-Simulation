@@ -12,8 +12,9 @@ namespace kinectfusion {
         namespace cuda {
 
             __global__
-            void update_tsdf_kernel(const PtrStepSz<float> depth_image, const PtrStepSz<uchar3> color_image,
-                                    PtrStepSz<short2> tsdf_volume, PtrStepSz<uchar3> color_volume, PtrStepSz<short> uncertainty_volume,
+            void update_tsdf_kernel(const PtrStepSz<float> depth_image, const PtrStepSz<uchar3> color_image,  
+                                    const PtrStepSz<float> dotValue_image,
+                                    PtrStepSz<short2> tsdf_volume, PtrStepSz<uchar3> color_volume, PtrStepSz<short> uncertainty_volume, PtrStepSz<float> extra_weight,
                                     int3 volume_size, float voxel_scale,
                                     CameraParameters cam_params, const float truncation_distance,
                                     const float depth_cutoff_distance,
@@ -27,6 +28,7 @@ namespace kinectfusion {
                 if (x >= volume_size.x || y >= volume_size.y)
                     return;
 
+                
                 for (int z = 0; z < volume_size.z; ++z) {
                     const Vec3fda position((static_cast<float>(x) + 0.5f) * voxel_scale,
                                            (static_cast<float>(y) + 0.5f) * voxel_scale,
@@ -44,7 +46,7 @@ namespace kinectfusion {
                         continue;
 
                     const float depth = depth_image.ptr(uv.y())[uv.x()];
-
+        
                     if (depth <= 0 || depth>depth_cutoff_distance || depth<depth_min_distance )
                         continue;
 
@@ -55,6 +57,7 @@ namespace kinectfusion {
                             (uv.x() - cam_params.principal_x) / cam_params.focal_x,
                             (uv.y() - cam_params.principal_y) / cam_params.focal_y,
                             1.f);
+                    
                     const float lambda = xylambda.norm();
 
                     const float sdf = (-1.f) * ((1.f / lambda) * camera_pos.norm() - depth);
@@ -71,6 +74,7 @@ namespace kinectfusion {
 
                         const float updated_tsdf = (current_weight * current_tsdf + add_weight * new_tsdf) /
                                                    (current_weight + add_weight);
+                        
 
                         const int new_weight = min(current_weight + add_weight, MAX_WEIGHT);
                         const int new_value = max(-SHORTMAX, min(SHORTMAX, static_cast<int>(updated_tsdf * SHORTMAX)));
@@ -78,7 +82,10 @@ namespace kinectfusion {
                         tsdf_volume.ptr(z * volume_size.y + y)[x] = make_short2(static_cast<short>(new_value),
                                                          static_cast<short>(new_weight));
                         uncertainty_volume.ptr(z * volume_size.y + y)[x] =  2;
+
+                        float dotValue = (extra_weight.ptr(z * volume_size.y + y)[x]  + dotValue_image.ptr(uv.y())[uv.x()])/new_weight;
                         
+                        extra_weight.ptr(z * volume_size.y + y)[x] =  min(dotValue,1.0);
 
                         if (sdf <= truncation_distance / 2 && sdf >= -truncation_distance / 2) {
                             uchar3& model_color = color_volume.ptr(z * volume_size.y + y)[x];
@@ -99,7 +106,9 @@ namespace kinectfusion {
             }
 
 
-            void surface_reconstruction(const cv::cuda::GpuMat& depth_image, const cv::cuda::GpuMat& color_image,
+            void surface_reconstruction(const cv::cuda::GpuMat& depth_image,
+                                       const cv::cuda::GpuMat& color_image,
+                                       const cv::cuda::GpuMat& dotValue_image,
                                         VolumeData& volume,
                                         const CameraParameters& cam_params, const float truncation_distance,
                                         const float depth_cutoff_distance,
@@ -111,8 +120,9 @@ namespace kinectfusion {
                 const dim3 blocks((volume.volume_size.x + threads.x - 1) / threads.x,
                                   (volume.volume_size.y + threads.y - 1) / threads.y);
 
-                update_tsdf_kernel<<<blocks, threads>>>(depth_image, color_image,
-                        volume.tsdf_volume, volume.color_volume, volume.uncertainty_volume,
+                update_tsdf_kernel<<<blocks, threads>>>(
+                        depth_image, color_image, dotValue_image,
+                        volume.tsdf_volume, volume.color_volume, volume.uncertainty_volume,volume.extra_weight,
                         volume.volume_size, volume.voxel_scale,
                         cam_params, truncation_distance,
                         depth_cutoff_distance,

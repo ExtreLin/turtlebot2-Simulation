@@ -33,8 +33,9 @@ namespace CommonTools
     FlannRadiusSearch<T>::FlannRadiusSearch(const std::vector<Eigen::Matrix<T,3,1>>&  pts)
     {
          set_points(pts);
-        _searchParams.sorted = false;
+        _searchParams.sorted = true;
         _searchParams.cores  = omp_get_max_threads();
+       // _searchParams.max_neighbors = 1;
     }
 
     template<typename T>

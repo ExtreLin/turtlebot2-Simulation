@@ -65,10 +65,15 @@ namespace kinectfusion {
                             uncertainty_volume.ptr(currBox[2]* volume_size.y  +currBox[1] )[currBox[0]] = 0;
                         boxCount++;
 
-                        float tx = abs((currBox[xi] - currPt.x())/dir.x());
-                        float ty = abs((currBox[yi] - currPt.y())/dir.y());
-                        float tz = abs((currBox[zi] - currPt.z())/dir.z());
-
+                        float tx, ty, tz;
+                        tx = ty = tz = 1;
+                        if(dir.x() != 0)
+                            tx = abs((currBox[xi] - currPt.x())/dir.x());
+                         if(dir.y() != 0)
+                            ty = abs((currBox[yi] - currPt.y())/dir.y());
+                         if(dir.z() != 0)
+                            tz = abs((currBox[zi] - currPt.z())/dir.z());
+                        
                         int tnx = nx;
                         int tny = ny;
                         int tnz = nz;
@@ -207,11 +212,16 @@ namespace kinectfusion {
                         if(uncertainty_volume.ptr(currBox[2]* volume_size.y  +currBox[1] )[currBox[0]] == -1 )
                             uncertainty_volume.ptr(currBox[2]* volume_size.y  +currBox[1] )[currBox[0]] = 0;
                     }
-
-                    float tx = abs((currBox[xi] - currPt.x())/dir.x());
-                    float ty = abs((currBox[yi] - currPt.y())/dir.y());
-                    float tz = abs((currBox[zi] - currPt.z())/dir.z());
-
+                    
+                    float tx, ty, tz;
+                    tx = ty = tz = 1;
+                    if(dir.x() != 0)
+                        tx = abs((currBox[xi] - currPt.x())/dir.x());
+                     if(dir.y() != 0)
+                        ty = abs((currBox[yi] - currPt.y())/dir.y());
+                     if(dir.z() != 0)
+                        tz = abs((currBox[zi] - currPt.z())/dir.z());
+        
                     int tnx = nx;
                     int tny = ny;
                     int tnz = nz;

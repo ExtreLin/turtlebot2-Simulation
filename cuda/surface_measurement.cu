@@ -68,6 +68,26 @@ namespace kinectfusion {
                 normal_map.ptr(y)[x] = make_float3(normal.x(), normal.y(), normal.z());
             }
 
+            __global__
+            void kernel_compute_dotValue_map(const PtrStepSz<float3> vertex_map, const PtrStep<float3> normal_map, PtrStep<float> dotValue_map)
+            {
+                const int x = blockIdx.x * blockDim.x + threadIdx.x;
+                const int y = blockIdx.y * blockDim.y + threadIdx.y;
+
+                if (x < 1 || x >= vertex_map.cols - 1 || y < 1 || y >= vertex_map.rows - 1)
+                    return;
+                
+                float dotValue = 0;
+                if(normal_map.ptr(y)[x].x!= 0 || normal_map.ptr(y)[x].y != 0 ||normal_map.ptr(y)[x].z != 0 )
+                {
+                    Vec3fda normal(normal_map.ptr(y)[x].x, normal_map.ptr(y)[x].y, normal_map.ptr(y)[x].z) ;
+                    Vec3fda direction(vertex_map.ptr(y)[x].x, vertex_map.ptr(y)[x].y, vertex_map.ptr(y)[x].z);
+                    direction.normalize();
+                    dotValue = normal.dot(direction) ;
+                }
+                dotValue_map.ptr(y)[x] = dotValue<0? 0: dotValue;
+            }
+
             void compute_vertex_map(const GpuMat& depth_map, GpuMat& vertex_map, const float depth_cutoff,
                                     const float min_dis,  const float clip_dis,
                                     const CameraParameters cam_params)
@@ -87,6 +107,17 @@ namespace kinectfusion {
                             (vertex_map.rows + threads.y - 1) / threads.y);
 
                 kernel_compute_normal_map<<<blocks, threads>>>(vertex_map, normal_map);
+
+                cudaThreadSynchronize();
+            }
+
+             void compute_dotValue_map(const GpuMat& vertex_map, const GpuMat& normal_map, GpuMat& dotValue_map)
+             {
+                dim3 threads(32,32);
+                dim3 blocks((vertex_map.cols + threads.x - 1)/threads.x,
+                            (vertex_map.rows + threads.y -1)/ threads.y);
+
+                kernel_compute_dotValue_map<<<blocks, threads>>>(vertex_map, normal_map,dotValue_map);
 
                 cudaThreadSynchronize();
             }

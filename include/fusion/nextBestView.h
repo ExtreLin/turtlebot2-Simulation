@@ -20,6 +20,7 @@ namespace nextbestview {
      */
     void  get_uncertainty_priority_queue(const cv::Mat& host_uncertainty_map, 
                                                                                    const cv::Mat& host_tsdf_volume,
+                                                                                   const cv::Mat& host_extra_weight,
                                                                                    const int3& volume_size,
                                                                                    std::vector<std::pair<Eigen::Vector3i, float>>& values);
 
@@ -36,7 +37,12 @@ namespace nextbestview {
                     std::function<bool(const Eigen::Matrix<int,6,1>& currBox)> func
     );
 
+    void twoD_DDA(const Eigen::Vector2f& start_pt, const Eigen::Vector2f& end_pt,
+                    std::function<bool(const Eigen::Vector4i& currBox)> func);
+
     float get_dis_value(float dis);
+
+    uchar3  value_to_color(float  value);
 }
 
 #endif

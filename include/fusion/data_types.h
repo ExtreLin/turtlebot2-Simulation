@@ -197,10 +197,11 @@ namespace kinectfusion {
 
             std::vector<GpuMat> vertex_pyramid;
             std::vector<GpuMat> normal_pyramid;
+           std::vector<GpuMat>  dotValue_pyramid;
 
             explicit FrameData(const size_t pyramid_height) :
                     depth_pyramid(pyramid_height), smoothed_depth_pyramid(pyramid_height),
-                    color_pyramid(pyramid_height), vertex_pyramid(pyramid_height), normal_pyramid(pyramid_height)
+                    color_pyramid(pyramid_height), vertex_pyramid(pyramid_height), normal_pyramid(pyramid_height), dotValue_pyramid(pyramid_height)
             { }
 
             // No copying
@@ -212,7 +213,8 @@ namespace kinectfusion {
                     smoothed_depth_pyramid(std::move(data.smoothed_depth_pyramid)),
                     color_pyramid(std::move(data.color_pyramid)),
                     vertex_pyramid(std::move(data.vertex_pyramid)),
-                    normal_pyramid(std::move(data.normal_pyramid))
+                    normal_pyramid(std::move(data.normal_pyramid)),
+                    dotValue_pyramid(std::move(data.dotValue_pyramid))
             { }
 
             FrameData& operator=(FrameData&& data) noexcept
@@ -222,6 +224,7 @@ namespace kinectfusion {
                 color_pyramid = std::move(data.color_pyramid);
                 vertex_pyramid = std::move(data.vertex_pyramid);
                 normal_pyramid = std::move(data.normal_pyramid);
+                dotValue_pyramid = std::move(data.dotValue_pyramid);
                 return *this;
             }
         };
@@ -292,8 +295,9 @@ namespace kinectfusion {
         struct VolumeData {
             GpuMat tsdf_volume; //short2
             GpuMat color_volume; //uchar4
-            GpuMat uncertainty_volume;
-
+            GpuMat uncertainty_volume;//short
+            GpuMat extra_weight;//float
+        
             int3 volume_size;
             float voxel_scale;
 
@@ -301,11 +305,13 @@ namespace kinectfusion {
                     tsdf_volume(cv::cuda::createContinuous(_volume_size.y * _volume_size.z, _volume_size.x, CV_16SC2)),
                     color_volume(cv::cuda::createContinuous(_volume_size.y * _volume_size.z, _volume_size.x, CV_8UC3)),
                     uncertainty_volume(cv::cuda::createContinuous(_volume_size.y * _volume_size.z, _volume_size.x, CV_16SC1)),
+                    extra_weight(cv::cuda::createContinuous(_volume_size.y * _volume_size.z, _volume_size.x, CV_32FC1)),
                     volume_size(_volume_size), voxel_scale(_voxel_scale)
             {
                 tsdf_volume.setTo(0);
                 color_volume.setTo(0);
                 uncertainty_volume.setTo(-1);
+                extra_weight.setTo(0);
             }
         };
 
