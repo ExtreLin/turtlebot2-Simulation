@@ -177,8 +177,9 @@ namespace kinectfusion {
 
                         normal.normalize();
 
-                        model_vertex.ptr(y)[x] = make_float3(vertex.x(), vertex.y(), vertex.z());
-                        model_normal.ptr(y)[x] = make_float3(normal.x(), normal.y(), normal.z());
+                        model_vertex.ptr(y)[x] = make_float3(vertex.x(),vertex.y(),vertex.z());
+
+                        model_normal.ptr(y)[x] = make_float3(normal.x(),normal.y(),normal.z());
 
                         auto location_in_grid_int = location_in_grid.cast<int>();
                         model_color.ptr(y)[x] = color_volume.ptr(

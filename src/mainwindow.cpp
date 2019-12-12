@@ -2,8 +2,12 @@
 #include "ui_mainwindow.h"
 #include <sys/types.h>
 #include <unistd.h>
+#include<stdlib.h>
+#include<cstdlib>
+#include<Eigen/Eigen>
 
-MainWindow::MainWindow(int argc, char** argv, QWidget *parent) :
+
+MainWindow::MainWindow(int argc, char** argv, VulkanWindow* vulkanWindow,QWidget *parent) :
     QMainWindow(parent),
     ui_(new Ui::MainWindow()),
     kLThread_(nullptr),
@@ -16,8 +20,14 @@ MainWindow::MainWindow(int argc, char** argv, QWidget *parent) :
     isRightKeyDown_(false)
 {
     ui_->setupUi(this);
+    QWidget *wrapper = QWidget::createWindowContainer(vulkanWindow);
+    ui_->scrollArea->setWidget(wrapper);
+    connect(ui_->testBtn, SIGNAL(clicked()),this,SLOT(slotTestBtnClicked()));
     qRegisterMetaType<sensor_msgs::CameraInfo>("sensor_msgs::CameraInfo"); 
     qRegisterMetaType<cv_bridge::CvImagePtr>("cv_bridge::CvImagePtr"); 
+    qRegisterMetaType<Eigen::Matrix<float, 7,1>>("Eigen::Matrix<float, 7,1>");
+    qRegisterMetaType<Eigen::Vector2f>("Eigen::Vector2f");
+
     kLThread_ = new CKinectListenerThread(argc,argv);
     aThread_  = new  CAlgorithimThread();
     connect(kLThread_,SIGNAL(sigCvImage(const cv_bridge::CvImagePtr)),this,SLOT(slotCvImageRGB(const cv_bridge::CvImagePtr)));
@@ -25,11 +35,19 @@ MainWindow::MainWindow(int argc, char** argv, QWidget *parent) :
     connect(kLThread_,SIGNAL(sigCameraInfo(const sensor_msgs::CameraInfo&)),aThread_,SLOT(slotCameraInfo(const sensor_msgs::CameraInfo&)));
     connect(kLThread_,SIGNAL(sigCvImage(const cv_bridge::CvImagePtr)),aThread_,SLOT(slotCvImageRGB(const cv_bridge::CvImagePtr)));
     connect(kLThread_,SIGNAL(sigCvImageDepth(const cv_bridge::CvImagePtr)),aThread_,SLOT(slotCvImageDepth(const cv_bridge::CvImagePtr)));
+    connect(kLThread_,SIGNAL(sigMoveFinished(const Eigen::Vector2f&)),aThread_,SLOT(slotMoveFinished(const Eigen::Vector2f&)));
     connect(this, SIGNAL(sigCarRun(const float&,const float&)),kLThread_,SLOT(slotCarRun(const float&,const float&)));
+    connect(this, SIGNAL(sigInitScan()), aThread_,SLOT(slotInitScan()));
+    connect(aThread_,SIGNAL(sigFinishInitScan()),this, SLOT(slotFinishInitScan()));
+    connect(aThread_, SIGNAL(sigInitScanMoving()),this, SLOT(slotInitScanMoving()));
+    connect(aThread_, SIGNAL(sigAutoScan()),aThread_, SLOT(slotAutoScan()));
+    connect(aThread_, SIGNAL(sigGoNext()),aThread_, SLOT(slotGoNext()));
+    connect(aThread_,SIGNAL(sigNavigation(const Eigen::Matrix<float,7,1>& )),kLThread_,SLOT(slotNavigation(const Eigen::Matrix<float,7,1>& )));
     kLThread_->start();
     aThread_->start();
+
     this->grabKeyboard();
-     for (int k = 0; k<256; ++k)
+    for (int k = 0; k<256; ++k)
 	{
 		colorTable_.push_back(qRgb(k, k, k));
 	}  
@@ -71,6 +89,10 @@ void MainWindow::slotCvImageDepth(const cv_bridge::CvImagePtr cv_ptr)
     mutex2_.unlock();
 }
 
+void MainWindow::slotFinishInitScan()
+{
+    emit sigCarRun(0,0);
+}
 
 void MainWindow::keyPressEvent(QKeyEvent *ev)
 {
@@ -147,4 +169,15 @@ void MainWindow::keyReleaseEvent(QKeyEvent *ev)
             rosAngular = 0;
     }
     emit sigCarRun(rosLinear,rosAngular);
+}
+
+void MainWindow::slotTestBtnClicked()
+{
+    emit sigInitScan();
+    slotInitScanMoving();
+}
+
+void MainWindow::slotInitScanMoving()
+{
+     emit sigCarRun(0,-PER_ANGLER);
 }

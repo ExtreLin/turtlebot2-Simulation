@@ -22,6 +22,15 @@
 #include <Eigen/Eigen>
 #endif
 
+#include "OpenMesh/Core/Mesh/TriMesh_ArrayKernelT.hh"
+#include"OpenMesh/Core/Mesh/PolyMesh_ArrayKernelT.hh"
+#include<Eigen/StdVector>
+#include<unordered_map>
+
+
+
+typedef OpenMesh::TriMesh_ArrayKernelT<OpenMesh::DefaultTraits> TriMesh;
+
 using cv::cuda::GpuMat;
 
 namespace kinectfusion {
@@ -119,6 +128,8 @@ namespace kinectfusion {
         int num_triangles;
     };
 
+    
+
     /**
      *
      * \brief The global configuration
@@ -184,6 +195,64 @@ namespace kinectfusion {
         std::vector<int> icp_iterations {10, 5, 4};
     };
 
+    inline void surfacemesh_to_TriMesh(const SurfaceMesh& smesh,TriMesh& tmesh)
+    {
+       // tmesh.clear();
+        std::vector<OpenMesh::Vec3f>  vertexs;
+        std::vector<Eigen::Vector3i>  faces;
+        //去除冗余点
+
+        struct PointHasher{
+            size_t operator()(const Eigen::Vector3f& v)const{
+            #define MM2INT(n) (size_t)(n*1000)
+                return ((MM2INT(v.x()) + 15)/30)^(((MM2INT(v.y() )+ 15 )/30)<<10)^(((MM2INT(v.z()) + 15)/30 )<<20);
+            #undef MM2INT
+            }
+        };
+
+        std::unordered_map<Eigen::Vector3f, int ,PointHasher> map_pt;
+        for(int i=0; i<smesh.num_vertices; i+=3)
+        {
+            Eigen::Vector3i fc;
+            for(int j=0;j<3;++j)
+            {
+                const float3& vert = smesh.triangles.ptr<float3>(0)[i + j];
+                auto iter = map_pt.insert(std::make_pair(Eigen::Vector3f(vert.x,vert.y,vert.z),vertexs.size()));
+                if(!iter.second)
+                    fc[j] = iter.first->second;
+                else {
+                        fc[j] = vertexs.size();
+                        vertexs.push_back(OpenMesh::Vec3f(vert.x,vert.y,vert.z));
+                }
+            }   
+            if(fc[0] == fc[1]||fc[0]==fc[2]||fc[1] == fc[2])
+                continue; 
+            faces.push_back(fc);
+        }
+        // tmesh.request_vertex_status();
+        // tmesh.request_edge_status();
+        // tmesh.request_face_status();
+
+        tmesh.reserve(smesh.num_vertices, int(smesh.num_triangles*1.5), smesh.num_triangles);
+        std::vector<OpenMesh::VertexHandle> vhs;
+        vhs.reserve(vertexs.size());
+
+        for(int i=0;i<vertexs.size();++i)
+        {
+            vhs.push_back(tmesh.add_vertex(vertexs[i]));
+        }
+
+        for(int i=0;i<faces.size();++i)
+        {
+            tmesh.add_face(
+                vhs[faces[i].x()],vhs[faces[i].y()],vhs[faces[i].z()]);
+        }
+        // tmesh.garbage_collection();
+        // tmesh.release_vertex_status();
+        // tmesh.release_edge_status();
+        // tmesh.request_face_status();
+    }
+
 
     namespace internal {
         /*
@@ -197,24 +266,18 @@ namespace kinectfusion {
 
             std::vector<GpuMat> vertex_pyramid;
             std::vector<GpuMat> normal_pyramid;
-           std::vector<GpuMat>  dotValue_pyramid;
 
             explicit FrameData(const size_t pyramid_height) :
                     depth_pyramid(pyramid_height), smoothed_depth_pyramid(pyramid_height),
-                    color_pyramid(pyramid_height), vertex_pyramid(pyramid_height), normal_pyramid(pyramid_height), dotValue_pyramid(pyramid_height)
+                    color_pyramid(pyramid_height), vertex_pyramid(pyramid_height), normal_pyramid(pyramid_height)
             { }
 
             // No copying
-            FrameData(const FrameData&) = delete;
-            FrameData& operator=(const FrameData& other) = delete;
-
-            FrameData(FrameData&& data) noexcept :
-                    depth_pyramid(std::move(data.depth_pyramid)),
-                    smoothed_depth_pyramid(std::move(data.smoothed_depth_pyramid)),
+            FrameData(const FrameData& data):
+                    depth_pyramid(std::move(data.smoothed_depth_pyramid)),
                     color_pyramid(std::move(data.color_pyramid)),
                     vertex_pyramid(std::move(data.vertex_pyramid)),
-                    normal_pyramid(std::move(data.normal_pyramid)),
-                    dotValue_pyramid(std::move(data.dotValue_pyramid))
+                    normal_pyramid(std::move(data.normal_pyramid))
             { }
 
             FrameData& operator=(FrameData&& data) noexcept
@@ -224,7 +287,6 @@ namespace kinectfusion {
                 color_pyramid = std::move(data.color_pyramid);
                 vertex_pyramid = std::move(data.vertex_pyramid);
                 normal_pyramid = std::move(data.normal_pyramid);
-                dotValue_pyramid = std::move(data.dotValue_pyramid);
                 return *this;
             }
         };
@@ -296,7 +358,6 @@ namespace kinectfusion {
             GpuMat tsdf_volume; //short2
             GpuMat color_volume; //uchar4
             GpuMat uncertainty_volume;//short
-            GpuMat extra_weight;//float
         
             int3 volume_size;
             float voxel_scale;
@@ -305,13 +366,11 @@ namespace kinectfusion {
                     tsdf_volume(cv::cuda::createContinuous(_volume_size.y * _volume_size.z, _volume_size.x, CV_16SC2)),
                     color_volume(cv::cuda::createContinuous(_volume_size.y * _volume_size.z, _volume_size.x, CV_8UC3)),
                     uncertainty_volume(cv::cuda::createContinuous(_volume_size.y * _volume_size.z, _volume_size.x, CV_16SC1)),
-                    extra_weight(cv::cuda::createContinuous(_volume_size.y * _volume_size.z, _volume_size.x, CV_32FC1)),
                     volume_size(_volume_size), voxel_scale(_voxel_scale)
             {
                 tsdf_volume.setTo(0);
                 color_volume.setTo(0);
-                uncertainty_volume.setTo(-1);
-                extra_weight.setTo(0);
+                uncertainty_volume.setTo(0);
             }
         };
 

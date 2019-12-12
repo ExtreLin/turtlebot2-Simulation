@@ -5,6 +5,7 @@
 #define KINECTFUSION_H
 
 #include "data_types.h"
+#include "nextBestView.h"
 
 namespace kinectfusion {
     /*
@@ -42,6 +43,10 @@ namespace kinectfusion {
          */
         bool process_frame(const cv::Mat_<float>& depth_map, const cv::Mat_<cv::Vec3b>& color_map);
 
+       std::vector<Eigen::Matrix<float,7,1> >  compute_paths();
+
+        bool process_frame_by_rt(const cv::Mat_<float>& depth_map, const cv::Mat_<cv::Vec3b>& color_map, const Eigen::Matrix4f& rt );
+
         /**
          * Retrieve all camera poses computed so far
          * @return A vector for 4x4 camera poses, consisting of rotation and translation
@@ -67,7 +72,7 @@ namespace kinectfusion {
         SurfaceMesh extract_mesh() const;
 
 
-        std::vector<Eigen::Vector3f>  get_uncertainty_points() const;
+        void get_uncertainty_points() const;
 
     private:
         // Internal parameters, not to be changed after instantiation
@@ -87,6 +92,8 @@ namespace kinectfusion {
         // Frame ID and raycast result for output purposes
         size_t frame_id;
         cv::Mat last_model_frame;
+
+        nextbestview::NextBestViewTools nbvTools;
     };
 
     /**
@@ -131,6 +138,14 @@ namespace kinectfusion {
                              const int pyramid_height,
                              const float distance_threshold, const float angle_threshold,
                              const std::vector<int>& iterations);
+        
+          /*
+         * Step 2: POSE ESTIMATION
+         * Use Robust ICP in CPU
+         */
+        void pose_estimation_robust_icp(Eigen::Matrix4f& pose,
+                             const FrameData& frame_data,
+                             const ModelData& model_data);
 
         namespace cuda {
 
@@ -140,7 +155,6 @@ namespace kinectfusion {
              */
             void surface_reconstruction(const cv::cuda::GpuMat& depth_image,
                                         const cv::cuda::GpuMat& color_image,
-                                        const cv::cuda::GpuMat& dotValue_image,
                                         VolumeData& volume,
                                         const CameraParameters& cam_params,
                                         const float truncation_distance,
@@ -175,8 +189,8 @@ namespace kinectfusion {
 
             SurfaceMesh marching_cubes(const VolumeData& volume, const int triangles_buffer_size);
 
-            std::vector<Eigen::Vector3f>  get_uncertainty_points_cuda( const VolumeData& volume,
-                                                                                                                                        const CameraParameters& camera_params);
+            void  get_uncertainty_points_cuda( const VolumeData& volume,
+                                                                                    const CameraParameters& camera_params);
         }
     }
 }

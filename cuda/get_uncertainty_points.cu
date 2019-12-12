@@ -22,10 +22,10 @@ namespace kinectfusion {
                     return;
 
                 for (int z = 0; z < volume_size.z; ++z) {
+
                     if(uncertainty_volume.ptr(z * volume_size.y + y)[x] !=2)
                         continue;
-
-                    //uncertainty_volume.ptr(z * volume_size.y + y)[x]  = -2;
+                        uncertainty_volume.ptr(z * volume_size.y + y)[x] =0 ;//未知
                     //射线求线段穿过的体素块
                    Vec3fda startPt(float(x)+0.5,float(y)+0.5,float(z)+0.5);
                    Vec3fda dir = camera_pos - startPt;
@@ -58,20 +58,15 @@ namespace kinectfusion {
                    Vec3fda  currPt = startPt;
 
                    float tsum = 0;//用于终止
-                   int  boxCount = 0;
                    do{
-
-                        if (boxCount>4)
-                            uncertainty_volume.ptr(currBox[2]* volume_size.y  +currBox[1] )[currBox[0]] = 0;
-                        boxCount++;
-
+                            uncertainty_volume.ptr(currBox[2]* volume_size.y  +currBox[1] )[currBox[0]] = 1; //空白
                         float tx, ty, tz;
                         tx = ty = tz = 1;
                         if(dir.x() != 0)
                             tx = abs((currBox[xi] - currPt.x())/dir.x());
-                         if(dir.y() != 0)
+                        if(dir.y() != 0)
                             ty = abs((currBox[yi] - currPt.y())/dir.y());
-                         if(dir.z() != 0)
+                        if(dir.z() != 0)
                             tz = abs((currBox[zi] - currPt.z())/dir.z());
                         
                         int tnx = nx;
@@ -107,7 +102,7 @@ namespace kinectfusion {
                         
                         tsum += t;
 
-                        if(tsum>1.0)
+                        if(tsum > 1.0)
                             break;
                         
                    }while(1);
@@ -208,9 +203,8 @@ namespace kinectfusion {
                     
                     if(currBox[0]>=0&&currBox[1]>=0&&currBox[2]>=0&&
                         currBox[0]<volume_size.x&&currBox[1]<volume_size.y&&currBox[2]<volume_size.z)
-                   {
-                        if(uncertainty_volume.ptr(currBox[2]* volume_size.y  +currBox[1] )[currBox[0]] == -1 )
-                            uncertainty_volume.ptr(currBox[2]* volume_size.y  +currBox[1] )[currBox[0]] = 0;
+                    {
+                            uncertainty_volume.ptr(currBox[2]* volume_size.y  +currBox[1] )[currBox[0]] = 1;//空白
                     }
                     
                     float tx, ty, tz;
@@ -288,42 +282,7 @@ namespace kinectfusion {
                 cudaThreadSynchronize();     
             }  
 
-              __global__
-            void  extend_mesh_voxel(
-                PtrStepSz<short> uncertainty_volume,
-                PtrStepSz<short3> offsetMat,
-                int offset_size,
-                int3 volume_size
-            )
-            {
-                const int x = blockIdx.x * blockDim.x + threadIdx.x;
-                const int y = blockIdx.y * blockDim.y + threadIdx.y;
-
-                if (x >= volume_size.x || y >= volume_size.y)
-                    return;
-
-                 for(int z =0; z < volume_size.z; ++z )
-                {
-                      if(uncertainty_volume.ptr(z * volume_size.y + y)[x]!=1)
-                        continue;
-
-                    for(int i=0; i < offset_size; ++i)
-                    {
-                        int tx = x + offsetMat.ptr(0)[i].x;
-                        int ty = y + offsetMat.ptr(0)[i].y;
-                        int tz = z + offsetMat.ptr(0)[i].z;
-
-                        if(tx >= volume_size.x || ty >= volume_size.y|| tz >= volume_size.z||
-                            tx<0 || ty<0 || tz<0 )
-                            continue;
-
-                        if(uncertainty_volume.ptr(tz * volume_size.y + ty)[tx]==0||
-                            uncertainty_volume.ptr(tz * volume_size.y + ty)[tx]==-1)
-                            uncertainty_volume.ptr(tz * volume_size.y + ty)[tx]=2;
-                    }
-                }
-            }
-
+    
             __global__
             void  mark_uncertainty_voxels(
                 PtrStepSz<short> uncertainty_volume,
@@ -343,9 +302,8 @@ namespace kinectfusion {
                     if(uncertainty_volume.ptr(z * volume_size.y + y)[x]!=2)
                         continue;
                         
-                    //扩散查找
-                    int value = 0;
-                    bool hasUnKown = false;
+                    //扩散查找                    
+                    int triCubeNum = 0;
                     for(int i=0; i < offset_size; ++i)
                     {
                         int tx = x + offsetMat.ptr(0)[i].x;
@@ -355,21 +313,32 @@ namespace kinectfusion {
                         if(tx >= volume_size.x || ty >= volume_size.y || tz >= volume_size.z||
                             tx<0 || ty<0 || tz<0 )
                             continue;
-
-                        if(uncertainty_volume.ptr(tz * volume_size.y + ty)[tx] >=0)
-                            value |=  (1<<uncertainty_volume.ptr(tz * volume_size.y + ty)[tx]);
-                        else
-                            hasUnKown = true;
+                        
+                        if(uncertainty_volume.ptr(tz * volume_size.y + ty)[tx] == 2)
+                             triCubeNum++;
                     }
 
-                    if((value != 5)||(!hasUnKown))
+                    if(triCubeNum>=10 )
                         continue;
-                    uncertainty_volume.ptr(z * volume_size.y + y)[x] = 3;
+
+                   for(int i=0; i < offset_size; ++i)
+                    {
+                        int tx = x + offsetMat.ptr(0)[i].x;
+                        int ty = y + offsetMat.ptr(0)[i].y;
+                        int tz = z + offsetMat.ptr(0)[i].z;
+
+                        if(tx >= volume_size.x || ty >= volume_size.y || tz >= volume_size.z||
+                            tx<0 || ty<0 || tz<0 )
+                            continue;
+                    
+                        if(uncertainty_volume.ptr(tz * volume_size.y + ty)[tx] != 2)
+                            uncertainty_volume.ptr(tz * volume_size.y + ty)[tx]  = 3;
+                    }   
                 }
             }
 
-            std::vector<Eigen::Vector3f>  get_uncertainty_points_cuda( const VolumeData& volume, 
-                                                                                                                                        const CameraParameters& camera_params)
+            void  get_uncertainty_points_cuda( const VolumeData& volume, 
+                                                                                        const CameraParameters& camera_params)
             {
                   GpuMat  offsetMat; 
                 std::vector<short3> offsetMat_host;
@@ -388,32 +357,11 @@ namespace kinectfusion {
                 offsetMat = cv::cuda::createContinuous(1, offsetMat_host.size(), CV_16SC3);
                 offsetMat.upload(cv::Mat(1, offsetMat_host.size(), CV_16SC3, offsetMat_host.data(), cv::Mat::AUTO_STEP));
 
-                GpuMat  offsetMatMore; 
-                std::vector<short3> offsetMatMore_host;
-
-                for(short i= -2; i<=2; ++i)
-                {
-                       for(short j= -2; j<=2; ++j)
-                       {
-                            for(short k= -2;  k<=2; ++k)
-                            {
-                                offsetMatMore_host.push_back(make_short3(i,j,k));
-                            }
-                       } 
-                }
-
-                offsetMatMore = cv::cuda::createContinuous(1, offsetMatMore_host.size(), CV_16SC3);
-                offsetMatMore.upload(cv::Mat(1, offsetMatMore_host.size(), CV_16SC3, offsetMatMore_host.data(), cv::Mat::AUTO_STEP));
-
-
                 const dim3 threads(32, 32);
                 const dim3 blocks((camera_params.image_width + threads.x - 1) / threads.x,
                                   (camera_params.image_height + threads.y - 1) / threads.y);
 
-                extend_mesh_voxel<<<blocks, threads>>>(volume.uncertainty_volume, offsetMatMore, offsetMatMore_host.size() , volume.volume_size);
-
                 mark_uncertainty_voxels<<<blocks, threads>>>(volume.uncertainty_volume, offsetMat, offsetMat_host.size() , volume.volume_size);
-                return std::vector<Eigen::Vector3f>();
             }
 
             __global__
@@ -430,8 +378,9 @@ namespace kinectfusion {
 
                 for(int z =0; z < volume_size.z; ++z )
                 {
-                    if(uncertainty_volume.ptr(z * volume_size.y + y)[x]==3)
-                        uncertainty_volume.ptr(z * volume_size.y + y)[x] = 2;
+                    if(uncertainty_volume.ptr(z * volume_size.y + y)[x]==3||
+                        uncertainty_volume.ptr(z * volume_size.y + y)[x]==2)
+                        uncertainty_volume.ptr(z * volume_size.y + y)[x] = 0;
                 }
             }
 

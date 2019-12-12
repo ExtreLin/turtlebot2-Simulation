@@ -185,8 +185,8 @@ namespace kinectfusion {
                 grid.x = static_cast<unsigned int>(std::ceil(cols / block.x));
                 grid.y = static_cast<unsigned int>(std::ceil(rows / block.y));
 
-                cv::cuda::GpuMat sum_buffer { cv::cuda::createContinuous(27, 1, CV_64FC1) };
-                cv::cuda::GpuMat global_buffer { cv::cuda::createContinuous(27, grid.x * grid.y, CV_64FC1) };
+                cv::cuda::GpuMat sum_buffer (cv::cuda::createContinuous(27, 1, CV_64FC1) );
+                cv::cuda::GpuMat global_buffer (cv::cuda::createContinuous(27, grid.x * grid.y, CV_64FC1)) ;
 
                 estimate_kernel<<<grid, block>>>(rotation_current, translation_current,
                         vertex_map_current, normal_map_current,

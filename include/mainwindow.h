@@ -4,10 +4,12 @@
 #include <QMainWindow>
 #include<QThread>
 #include<QMutex>
+#include<QTimer>
 #include"qevent.h"
 #include <QMetaType>
 #include"kinectListenerThread.h"
 #include "algorithmThread.h"
+#include "vulkanwindow.h"
 
 #define PER_LINER  0.6
 #define PER_ANGLER  M_PI/10
@@ -20,7 +22,7 @@ class MainWindow : public QMainWindow
 {
     Q_OBJECT
 public:
-    explicit MainWindow(int argc, char** argv, QWidget *parent = nullptr);
+    explicit MainWindow(int argc, char** argv, VulkanWindow*  vulkanWindow,QWidget *parent = nullptr);
     ~MainWindow();
 protected:
     virtual void keyPressEvent(QKeyEvent *ev);
@@ -28,8 +30,12 @@ protected:
 public slots:
     void slotCvImageRGB(const cv_bridge::CvImagePtr) ;
     void slotCvImageDepth(const cv_bridge::CvImagePtr) ;
+    void slotTestBtnClicked();
+    void slotFinishInitScan();
+    void slotInitScanMoving();
 signals:
     void sigCarRun(const float&,const float&);
+    void sigInitScan();
  private:
     Ui::MainWindow *ui_;
     CKinectListenerThread *kLThread_;

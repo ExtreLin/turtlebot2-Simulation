@@ -8,13 +8,19 @@ add_compile_options(-std=c++11)
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 
-SET("OpenCV_DIR" "/usr/local/share/OpenCV")
+set(LIBS_OPTIONAL_3RD)
+#find OpenCV
+set("OpenCV_DIR" "/usr/local/share/OpenCV")
 find_package(OpenCV 3.0 REQUIRED)
-if (OpenCV_INCLUDE_DIRS)
-    include_directories("${OpenCV_INCLUDE_DIRS}")
-    link_directories(${OpenCV_DIR}/lib)
-endif (OpenCV_INCLUDE_DIRS)
+if(OPENCV_FOUND)
+  include_directories(${OpenCV_INCLUDE_DIRS})
+  link_directories(${OpenCV_DIR}/lib)
+  list(APPEND  LIBS_OPTIONAL_3RD ${OpenCV_LIBRARIES}) 
+else()
+  message(FATAL_ERROR "can't find opencv !")
+endif ()
 
+#find catkin
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
@@ -24,34 +30,77 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
 )
 
-find_package(Qt5  REQUIRED COMPONENTS  Widgets  )
+if(catkin_INCLUDE_DIRS)
+  include_directories(${catkin_INCLUDE_DIRS})
+  list(APPEND  LIBS_OPTIONAL_3RD   ${catkin_LIBRARIES}) 
+else()
+  message(FATAL_ERROR "can't find catkin !")
+endif()
+
+#find qt5
+set(Qt5_DIR "/home/extrelin/Qt5.13.1/5.13.1/gcc_64/lib/cmake/Qt5")
+find_package(Qt5 5.13  REQUIRED COMPONENTS  Widgets )
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
+list(APPEND  LIBS_OPTIONAL_3RD    Qt5::Widgets) 
 
+#find boost 
 find_package(Boost REQUIRED)
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
+    list(APPEND  LIBS_OPTIONAL_3RD      ${Boost_LIBRARIES}) 
 else()
-    message(FATAL_ERROR "can not find boost !")
+    message(FATAL_ERROR "can't find boost !")
 endif()
 
-find_package(CUDA 8.0 REQUIRED)
-IF (CUDA_FOUND)
+#find cuda
+find_package(CUDA 9.0 REQUIRED)
+if (CUDA_FOUND)
     include_directories("${CUDA_INCLUDE_DIRS}")
+    list(APPEND  LIBS_OPTIONAL_3RD   ${CUDA_LIBRARIES}) 
     # Optional: Specify the arch of your CUDA hardware here
-ENDIF ()
+else()
+  message(FATAL_ERROR "can't find cuda!")
+endif()
 
+#find eigen
 find_package(Eigen3 REQUIRED)
-if (EIGEN3_INCLUDE_DIR)
-    include_directories("${EIGEN3_INCLUDE_DIR}")
+if(EIGEN3_FOUND)
+  include_directories("${EIGEN3_INCLUDE_DIR}")
+else()
+  message(FATAL_ERROR "can't find eigen3!")
 endif ()
 
+#find openmp
 find_package(OpenMP QUIET)
 if(OPENMP_FOUND)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}  ${OpenMP_C_FLAGS}")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  ${OpenMP_CXX_FLAGS}")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS}  ${OpenMP_C_FLAGS}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}  ${OpenMP_CXX_FLAGS}")
+else()
+  message(FATAL_ERROR "can't find openmp!")
 endif()
+
+#find openmesh
+find_package( OpenMesh REQUIRED)
+if(OPENMESH_FOUND)
+  include_directories( ${OpenMesh_INCLUDE_DIRS} )
+  list(APPEND  LIBS_OPTIONAL_3RD     ${OpenMesh_LIBS}) 
+  list(APPEND  LIBS_OPTIONAL_3RD     OpenMeshCore) 
+  list(APPEND  LIBS_OPTIONAL_3RD     OpenMeshTools) 
+else()
+  message(FATAL_ERROR "can't find openmesh")
+endif()
+
+
+#This project also need glog , flann and ceres but I install in my  ubuntu 18.04 system, so if your system is windows 
+#you need to find_package glog and ceres
+
+#find glog
+list(APPEND  LIBS_OPTIONAL_3RD  glog) 
+#find ceres 
+list(APPEND  LIBS_OPTIONAL_3RD   ceres) 
+#find flann
 
 # ------------------------------------------------
 
@@ -59,12 +108,9 @@ endif()
 
 # find all sources files
 file(GLOB_RECURSE HEADERS  ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h)
-file(GLOB_RECURSE SOURCES  ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
+file(GLOB_RECURSE SOURCES  ${CMAKE_CURRENT_SOURCE_DIR}/src/*.c*)
 file(GLOB_RECURSE CUDAS  ${CMAKE_CURRENT_SOURCE_DIR}/cuda/*.cu)
-set(FORMS
-  src/mainwindow.ui
-)
-
+set(FORMS src/mainwindow.ui)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -157,63 +203,34 @@ set(FORMS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
 #  INCLUDE_DIRS include
-#  LIBRARIES Sn3DCarRGBn
-#  CATKIN_DEPENDS roRGBp std_msgs
-#  DEPENDS system_liRGB
+#  LIBRARIES Sn3DCarScan
+#  CATKIN_DEPENDS ros std_msgs
+#  DEPENDS system_library
 )
 
 ###########
 ## Build ##
 ###########
 
-## Specify additionaRGBocations of header files
-## Your package locaRGBns should be listed before other locations
+#include
 include_directories(
-# include
-   include/Sn3DCarScan
+   include/sn3d_car_auto_scan
    include/ros_file
    include/fusion
+   include/robust_pcl_registration
+   include/vulkan_window
    include
-  ${catkin_INCLUDE_DIRS}
 )
 
-## Declare a C++ librarRGB
-# add_library(${PROJECTRGBE}
-#   src/${PROJECT_NAME}RGBDCarScan.cpp
-# )
-
-## Add cmake target depRGBncies of the library
-## as an example, code may need to be generated before libraries
-## either from message generation or dynamic reconfigure
-# add_dependencies(${PROJECT_NAME} ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
-## Declare a C++ executable
-## With catkin_make all packages are built within a single CMake context
-## The recommended prefix ensures that target names across packages don't collide
+#cuda compile
 CUDA_COMPILE(cuda_Target  ${CUDAS} )
-
 add_executable(${PROJECT_NAME}_node ${HEADERS} ${SOURCES} ${FORMS}  ${cuda_Target} )
 set_target_properties(${PROJECT_NAME}_node PROPERTIES LINKER_LANGUAGE ${CUDA_C_OR_CXX})
 SET(CUDA_NVCC_FLAGS ${CUDA_NVCC_FLAGS} " -gencode arch=compute_20,code=sm_20")
 
-## Rename C++ executable without prefix
-## The above recommended prefix causes long target names, the following renames the
-## target back to the shorter version for ease of user use
-## e.g. "rosrun someones_pkg node" instead of "rosrun someones_pkg someones_pkg_node"
-# set_target_properties(${PROJECT_NAME}_node PROPERTIES OUTPUT_NAME node PREFIX "")
-
-## Add cmake target dependencies of the executable
-## same as for the library above
-# add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-## Specify libraries to link a library or executable target against
-
+#link libraries
  target_link_libraries(${PROJECT_NAME}_node
-   ${catkin_LIBRARIES}
-   ${OpenCV_LIBRARIES}
-   ${Boost_LIBRARIES}
-   ${CUDA_LIBRARIES}
-   ${FLANN_LIBRARIES}
-   Qt5::Widgets 
+    ${LIBS_OPTIONAL_3RD}
  )
 
 #############

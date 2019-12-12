@@ -13,8 +13,7 @@ namespace kinectfusion {
 
             __global__
             void update_tsdf_kernel(const PtrStepSz<float> depth_image, const PtrStepSz<uchar3> color_image,  
-                                    const PtrStepSz<float> dotValue_image,
-                                    PtrStepSz<short2> tsdf_volume, PtrStepSz<uchar3> color_volume, PtrStepSz<short> uncertainty_volume, PtrStepSz<float> extra_weight,
+                                    PtrStepSz<short2> tsdf_volume, PtrStepSz<uchar3> color_volume, PtrStepSz<short> uncertainty_volume, 
                                     int3 volume_size, float voxel_scale,
                                     CameraParameters cam_params, const float truncation_distance,
                                     const float depth_cutoff_distance,
@@ -62,7 +61,7 @@ namespace kinectfusion {
 
                     const float sdf = (-1.f) * ((1.f / lambda) * camera_pos.norm() - depth);
 
-                    if (sdf >= -truncation_distance) {
+                    if (sdf >= -truncation_distance&&sdf <= truncation_distance) {
                         const float new_tsdf = fmin(1.f, sdf / truncation_distance);
 
                         short2 voxel_tuple = tsdf_volume.ptr(z * volume_size.y + y)[x];
@@ -81,11 +80,8 @@ namespace kinectfusion {
 
                         tsdf_volume.ptr(z * volume_size.y + y)[x] = make_short2(static_cast<short>(new_value),
                                                          static_cast<short>(new_weight));
-                        uncertainty_volume.ptr(z * volume_size.y + y)[x] =  2;
 
-                        float dotValue = (extra_weight.ptr(z * volume_size.y + y)[x]  + dotValue_image.ptr(uv.y())[uv.x()])/new_weight;
-                        
-                        extra_weight.ptr(z * volume_size.y + y)[x] =  min(dotValue,1.0);
+                        uncertainty_volume.ptr(z * volume_size.y + y)[x] =  2;
 
                         if (sdf <= truncation_distance / 2 && sdf >= -truncation_distance / 2) {
                             uchar3& model_color = color_volume.ptr(z * volume_size.y + y)[x];
@@ -108,7 +104,6 @@ namespace kinectfusion {
 
             void surface_reconstruction(const cv::cuda::GpuMat& depth_image,
                                        const cv::cuda::GpuMat& color_image,
-                                       const cv::cuda::GpuMat& dotValue_image,
                                         VolumeData& volume,
                                         const CameraParameters& cam_params, const float truncation_distance,
                                         const float depth_cutoff_distance,
@@ -121,8 +116,8 @@ namespace kinectfusion {
                                   (volume.volume_size.y + threads.y - 1) / threads.y);
 
                 update_tsdf_kernel<<<blocks, threads>>>(
-                        depth_image, color_image, dotValue_image,
-                        volume.tsdf_volume, volume.color_volume, volume.uncertainty_volume,volume.extra_weight,
+                        depth_image, color_image, 
+                        volume.tsdf_volume, volume.color_volume, volume.uncertainty_volume,
                         volume.volume_size, volume.voxel_scale,
                         cam_params, truncation_distance,
                         depth_cutoff_distance,

@@ -230,7 +230,7 @@ namespace kinectfusion {
                                                                     vertex_list[v3][threadIdx.x].y,
                                                                     vertex_list[v3][threadIdx.x].z);
 
-                    uncertainty_volume.ptr(z * volume_size.y + y)[x] = 1;
+                    uncertainty_volume.ptr(z * volume_size.y + y)[x] = 2;
                 }
             }
 

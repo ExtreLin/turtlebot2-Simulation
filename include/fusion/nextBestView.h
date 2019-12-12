@@ -5,6 +5,11 @@
 
 namespace nextbestview {
 
+    struct NextBestViewTools
+    {
+        cv::Mat  scanedVoxel;
+        Eigen::Vector3f  oriCarPt;
+    };
     /**
      * 获得路径图，标记出当前地图中哪些是空点，可以到达
      * @param host_uncertainty_map  空间体素，保存每个格子的扫描状态
@@ -20,12 +25,11 @@ namespace nextbestview {
      */
     void  get_uncertainty_priority_queue(const cv::Mat& host_uncertainty_map, 
                                                                                    const cv::Mat& host_tsdf_volume,
-                                                                                   const cv::Mat& host_extra_weight,
                                                                                    const int3& volume_size,
                                                                                    std::vector<std::pair<Eigen::Vector3i, float>>& values);
 
 
-    Eigen::Vector3f  find_next_best_view(const cv::Mat& validness_map,
+    Eigen::Matrix<float,6,1>  find_next_best_view(const cv::Mat& validness_map,
                                                            const cv::Mat& host_uncertainty_map, 
                                                            const std::vector<std::pair<Eigen::Vector3i, float>>& values,
                                                            const kinectfusion::SurfaceMesh surface_mesh,
@@ -43,6 +47,29 @@ namespace nextbestview {
     float get_dis_value(float dis);
 
     uchar3  value_to_color(float  value);
+
+    void  get_2d_target_map(const cv::Mat& host_uncertainty_map, 
+                                                                    const std::vector<OpenMesh::Vec3f> bdNoraml,
+                                                                    const  cv::Mat& nlMap,
+                                                                    const int3& volume_size, 
+                                                                    std::vector<Eigen::Vector2i>& target_coord,
+                                                                    cv::Mat& u2dMap,
+                                                                    cv::Mat& u2dMapNormal);
+
+    void  get_2d_candidate_map(const cv::Mat& host_uncertainty_map, 
+                                                                  const  std::vector<Eigen::Vector2i>& target_coord,
+                                                                  const cv::Mat& u2dMap,
+                                                                  const cv::Mat& u2dMapNormal, 
+                                                                  const int3& volume_size, 
+                                                                  const float& voxel_scale,
+                                                                  cv::Mat& u2dCandidateMap,
+                                                                  std::vector<std::vector<Eigen::Matrix<float,7,1>>>& cluster_candidate_coords);
+
+    void get_pose_by_map(const std::vector<Eigen::Vector2i>& input_coords, 
+                                                      const Eigen::Vector2i& center, 
+                                                      const float& voxel_scale,
+                                                      std::vector<Eigen::Matrix<float,7,1>>& poses);
+
 }
 
 #endif

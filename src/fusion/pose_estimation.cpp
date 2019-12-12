@@ -6,6 +6,13 @@
 using Matf31da = Eigen::Matrix<float, 3, 1, Eigen::DontAlign>;
 using Matrix3frm = Eigen::Matrix<float, 3, 3, Eigen::RowMajor>;
 
+#include<robust_pcl_registration/point_cloud_registration.h>
+
+using point_cloud_registration::PointCloudRegistration;
+using point_cloud_registration::PointCloudRegistrationParams;
+
+typedef   pcl::PointCloud<pcl::PointXYZ> TCloud;
+
 namespace kinectfusion {
     namespace internal {
 
@@ -79,5 +86,81 @@ namespace kinectfusion {
 
             return true;
         }
+
+
+        void pose_estimation_robust_icp(Eigen::Matrix4f& pose,
+                             const FrameData& frame_data,
+                             const ModelData& model_data)
+        {
+              cv::Mat  frameV ,modelV;
+            frame_data.vertex_pyramid[0].download(frameV);
+            model_data.vertex_pyramid[0].download(modelV);
+
+            //构造pcl ·cloud
+            TCloud   sourceCloud, targetCloud;
+            //
+            Eigen::Matrix3f rrr = pose.block(0, 0, 3, 3);
+            Eigen::Vector3f ttt = pose.block(0, 3, 3, 1);
+            //std::ofstream   fo("/tmp/fo.asc");
+            //std::ofstream   mo("/tmp/mo.asc");
+            for(int i=0;i<frameV.cols;++i)
+            {
+                for(int j =0;j<frameV.rows;++j)
+                {
+                    float3 fv =  frameV.at<float3>(j,i);
+                    Eigen::Vector3f fvv (fv.x, fv.y, fv.z);
+                    float3 mv = modelV.at<float3>(j,i);
+                    pcl::PointXYZ pt;
+                    if(fv.x !=0 || fv.y !=0 ||fv.z != 0)
+                    {
+                        fvv = rrr *  fvv  + ttt;
+                        pt.x = fvv.x(); pt.y = fvv.y(); pt.z = fvv.z();
+                        sourceCloud.push_back(pt);
+                        //fo<< fvv.x()<<" "<< fvv.y()<<" "<<fvv.z()<<std::endl;
+                    }
+                    
+                    if(mv.x !=0 || mv.y !=0 ||mv.z != 0)
+                    {
+                        pt.x = mv.x;  pt. y = mv.y; pt.z = mv.z;
+                        targetCloud.push_back(pt);
+                        //mo<<mv.x<<" "<<mv.y<<" "<<mv.z<<std::endl;
+                    }       
+                }
+            }
+            //构造稀疏矩阵
+            Eigen::SparseMatrix<int, Eigen::RowMajor> data_association(sourceCloud.size(), targetCloud.size());
+            std::vector<Eigen::Triplet<int>> tripletList;
+            size_t minSize =  sourceCloud.size() < targetCloud.size()?  sourceCloud.size(): targetCloud.size();
+            for (std::size_t i = 0; i < minSize; ++i)
+            {
+                tripletList.push_back(Eigen::Triplet<int>(i, i, 1));
+            }
+            data_association.setFromTriplets(tripletList.begin(), tripletList.end());
+            data_association.makeCompressed();
+            //设置icp参数
+            PointCloudRegistrationParams params;
+            params.dof = std::numeric_limits<double>::infinity();
+            params.max_neighbours = 3;
+            params.dimension = 3;
+            PointCloudRegistration registration(sourceCloud, targetCloud, data_association, params);
+            //设置ceres 非线性优化器的参数
+            ceres::Solver::Options options;
+            options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
+            options.use_nonmonotonic_steps = true;
+            options.minimizer_progress_to_stdout = false;
+            options.max_num_iterations = std::numeric_limits<int>::max();
+            options.function_tolerance = 1;
+            options.num_threads = 8;
+            ceres::Solver::Summary summary;
+            //调用icp算法
+            registration.solve(options, &summary);
+            //得到拼接后的rt
+            auto estimated_transform = registration.transformation();
+            //将rt和原始rt相乘得到新的rt
+            Eigen::MatrixX4f estimated = estimated_transform.matrix().cast<float>();
+            pose= estimated * pose;
+            //fo.close();
+            //mo.close();
+        }     
     }
 }
