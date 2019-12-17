@@ -57,10 +57,7 @@ void VulkanModelRenderer::initResources()
 
 void VulkanModelRenderer::initSwapChainResources()
 {
-    //proj_ = window_->clipCorrectionMatrix();
     const QSize sz = window_->swapChainImageSize();
-    //proj_.ortho(-10.0f,10.0f,-10.0f,10.0f,0.01f,1000.0f);
-    //proj_.perspective(45.0f, sz.width() / (float) sz.height(), 0.01f, 1000.0f);
     markViewProjDirty();
 }
 

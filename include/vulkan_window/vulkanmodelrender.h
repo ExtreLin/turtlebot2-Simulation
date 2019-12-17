@@ -22,7 +22,7 @@ public:
     void releaseSwapChainResources() override;
     void releaseResources() override;
     void startNextFrame() override;
-
+ 
     void setMesh(const TriMesh& mesh);
     void markViewProjDirty() { vpDirty_ = window_->concurrentFrameCount(); }
 public:
