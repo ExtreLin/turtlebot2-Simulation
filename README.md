@@ -5,9 +5,9 @@
 2. turtlebot_gazebo turtlebot_world.launch 
 3. turtlebot_gazebo amcl_demo.launch 
 4. OpenCV with cuda 
-5. Qt 5.13 or highter 
+5. Qt 5.13 or higher 
 6. Boost 
-7. Cuda 9.0 or highter 
+7. Cuda 9.0 or higher 
 8. Eigen 3.0 
 9. OpenMesh 
 10. glog 
