@@ -378,11 +378,12 @@ void VulkanRenderer::releaseResources()
 
 void VulkanRenderer::startNextFrame()
 {
+    int a =0;
     VkDevice dev = m_window->device();
     VkCommandBuffer cb = m_window->currentCommandBuffer();
     const QSize sz = m_window->swapChainImageSize();
 
-    VkClearColorValue clearColor = { 0, 0, 0, 1 };
+    VkClearColorValue clearColor = { 1, 0, 0, 1 };
     VkClearDepthStencilValue clearDS = { 1, 0 };
     VkClearValue clearValues[3];
     memset(clearValues, 0, sizeof(clearValues));

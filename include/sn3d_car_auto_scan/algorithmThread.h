@@ -38,5 +38,6 @@ signals:
     void sigFinishInitScan();
     void sigInitScanMoving();
     void sigNavigation(const Eigen::Matrix<float,7,1>& pose);
+    void sigSendMesh(const TriMesh& mesh);
 };
 #endif

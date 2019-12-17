@@ -114,7 +114,7 @@ namespace kinectfusion {
                  
                       
                 OpenMesh::Vec3f   nl;
-                tmesh.calc_vertex_normal_correct(vh,nl);
+                tmesh.calc_vertex_normal_correct(*vh,nl);
                 if(nl[0]== 0 && nl[1] ==0&&nl[2] == 0  )
                     nl = OpenMesh::Vec3f (0,1,0);
                 nl.normalize();

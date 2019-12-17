@@ -1,7 +1,11 @@
 #include "algorithmThread.h"
 
+
 void CAlgorithimThread::run()
 {
+    TriMesh mesh;
+    OpenMesh::IO::read_mesh(mesh,"tmp/meshout.ply");
+    sigSendMesh(mesh);
     QThread::exec();
 }
 

@@ -27,6 +27,8 @@ MainWindow::MainWindow(int argc, char** argv, VulkanWindow* vulkanWindow,QWidget
     qRegisterMetaType<cv_bridge::CvImagePtr>("cv_bridge::CvImagePtr"); 
     qRegisterMetaType<Eigen::Matrix<float, 7,1>>("Eigen::Matrix<float, 7,1>");
     qRegisterMetaType<Eigen::Vector2f>("Eigen::Vector2f");
+    qRegisterMetaType<TriMesh>("TriMesh");
+
 
     kLThread_ = new CKinectListenerThread(argc,argv);
     aThread_  = new  CAlgorithimThread();
@@ -43,6 +45,11 @@ MainWindow::MainWindow(int argc, char** argv, VulkanWindow* vulkanWindow,QWidget
     connect(aThread_, SIGNAL(sigAutoScan()),aThread_, SLOT(slotAutoScan()));
     connect(aThread_, SIGNAL(sigGoNext()),aThread_, SLOT(slotGoNext()));
     connect(aThread_,SIGNAL(sigNavigation(const Eigen::Matrix<float,7,1>& )),kLThread_,SLOT(slotNavigation(const Eigen::Matrix<float,7,1>& )));
+    
+    connect(aThread_,&CAlgorithimThread::sigSendMesh,vulkanWindow,[=](const TriMesh& mesh){
+        vulkanWindow->slotGetUpateMesh(mesh);
+    });
+
     kLThread_->start();
     aThread_->start();
 

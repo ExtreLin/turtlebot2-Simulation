@@ -39,11 +39,11 @@ endif()
 
 #find qt5
 set(Qt5_DIR "/home/extrelin/Qt5.13.1/5.13.1/gcc_64/lib/cmake/Qt5")
-find_package(Qt5 5.13  REQUIRED COMPONENTS  Widgets )
+find_package(Qt5 5.13  REQUIRED COMPONENTS  Widgets Concurrent )
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTOUIC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-list(APPEND  LIBS_OPTIONAL_3RD    Qt5::Widgets) 
+list(APPEND  LIBS_OPTIONAL_3RD    Qt5::Widgets  Qt5::Concurrent) 
 
 #find boost 
 find_package(Boost REQUIRED)
