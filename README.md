@@ -1,17 +1,17 @@
 # turtlebot2-Simulation
 
 ## Depends
-1.ROS
-2.turtlebot_gazebo turtlebot_world.launch
-3.turtlebot_gazebo amcl_demo.launch
-4.OpenCV with cuda
-5.Qt 5.13 or highter
-6.Boost
-7.Cuda 9.0 or highter
-8.Eigen 3.0
-9.OpenMesh
-10.glog
-11.ceres
+1.ROS 
+2.turtlebot_gazebo turtlebot_world.launch 
+3.turtlebot_gazebo amcl_demo.launch 
+4.OpenCV with cuda 
+5.Qt 5.13 or highter 
+6.Boost 
+7.Cuda 9.0 or highter 
+8.Eigen 3.0 
+9.OpenMesh 
+10.glog 
+11.ceres 
 
 ## compile
 1. cmake 
