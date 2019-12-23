@@ -235,7 +235,7 @@ void VulkanModelRenderer::ensureBuffers()
     devFuncs_->vkGetBufferMemoryRequirements(dev, meshVertexBuf_, &meshVertMemReq);
 
     //开始生成index buffer
-    const int indexByteCount =  mesh_.n_faces() * 3 * sizeof(uint);
+    const int indexByteCount =  mesh_.n_faces() * 3 * sizeof(uint32_t);
     bufInfo.size = indexByteCount;
     bufInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
     err = devFuncs_->vkCreateBuffer(dev, &bufInfo, nullptr, &meshIndexBuf_);
@@ -298,24 +298,24 @@ void VulkanModelRenderer::ensureBuffers()
     }
     //拷贝，并且unmap
     memcpy(p, vertexData.data(), meshByteCount);
-    devFuncs_->vkUnmapMemory(dev, bufMem_);
+    //devFuncs_->vkUnmapMemory(dev, bufMem_);
     //生成索引数据
-     err = devFuncs_->vkMapMemory(dev, bufMem_, indexStartOffset, meshMaterial_.uniMemStartOffset , 0, reinterpret_cast<void **>(&p));
+    // err = devFuncs_->vkMapMemory(dev, bufMem_, indexStartOffset, meshMaterial_.uniMemStartOffset , 0, reinterpret_cast<void **>(&p));
     if (err != VK_SUCCESS)
         qFatal("Failed to map memory: %d", err);
     //生成顶点数据
-    std::vector<uint>   indexData(mesh_.n_faces()*3);
+    std::vector<uint32_t>   indexData(mesh_.n_faces()*3);
     for(int i=0;i <mesh_.n_faces();++i)
     {
         auto fn = mesh_.face_handle(i);
         int count =0;
         for(auto fv_iter = mesh_.fv_begin(fn);fv_iter!= mesh_.fv_end(fn);fv_iter++,count ++)
         {
-            indexData[i*3  + count] = uint(fv_iter->idx());
+            indexData[i*3  + count] = uint32_t(fv_iter->idx());
         }
     }
     //拷贝，并且unmap
-    memcpy(p, indexData.data(), indexByteCount);
+    memcpy(p+ indexStartOffset, indexData.data(), indexByteCount);
     devFuncs_->vkUnmapMemory(dev, bufMem_);
 
     // 然后将开始就生成的描述池中写入uniform buffer 描述实例信息
@@ -390,7 +390,7 @@ void VulkanModelRenderer::buildDrawCallsForModel()
         memcpy(p + meshMaterial_ .vertUniSize + 12, eyePositionData, 12 );
         devFuncs_->vkUnmapMemory(dev, bufMem_);
     }
-    devFuncs_->vkCmdDrawIndexed(cb, mesh_.n_faces(),1, 0, 0,0);
+    devFuncs_->vkCmdDrawIndexed(cb, mesh_.n_faces()*3,1, 0, 0,0);
 }
 
 void VulkanModelRenderer::createPipelines()

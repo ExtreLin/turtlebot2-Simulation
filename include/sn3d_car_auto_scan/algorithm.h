@@ -34,10 +34,11 @@ public:
     void setCvImageRGB(const cv_bridge::CvImagePtr&);
     void setCvImageDepth(const cv_bridge::CvImagePtr&);
     bool getRGBptr(){return imgRGB_.get();}
-    void getMesh();
+    void processFrame();
     void getMeshAutoScan(const Eigen::MatrixX4f& rt);
     void pose2RT(const Eigen::Matrix<float,7,1>& pose,Eigen::Matrix4f& rt);
-   std::vector<Eigen::Matrix<float,7,1> > getScanPath();
+    TriMesh getMesh();
+   std::vector<Eigen::Matrix<float,7,1> > getScanPath(std::function<void(const TriMesh& )> );
     ScanStatus getScanStatus(){return status_;}
     ScanStatus setScanStatus(const ScanStatus& ss ) {status_ = ss;}
 private:

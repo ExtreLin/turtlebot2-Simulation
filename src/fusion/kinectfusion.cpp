@@ -87,12 +87,13 @@ namespace kinectfusion {
 
     
 
-    std::vector<Eigen::Matrix<float,7,1> > Pipeline::compute_paths()
+    std::vector<Eigen::Matrix<float,7,1> > Pipeline::compute_paths(std::function<void(const TriMesh& )> func)
     {
            SurfaceMesh surface_mesh =  extract_mesh();
-            export_ply("/tmp/meshout.ply",surface_mesh);
+            //export_ply("/tmp/meshout.ply",surface_mesh);
             TriMesh tmesh;
             surfacemesh_to_TriMesh(surface_mesh,tmesh);
+            func(tmesh);
             //get_uncertainty_points();
             cv::Mat host_uncertainty_map; 
             cv::Mat host_tsdf_volume;
@@ -210,7 +211,7 @@ namespace kinectfusion {
                                                configuration.depth_min_distance,
                                                configuration.clip_dis,
                                                current_pose.inverse());
-
+        
     }
 
     cv::Mat Pipeline::get_last_model_frame() const

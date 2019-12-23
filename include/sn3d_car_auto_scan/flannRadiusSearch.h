@@ -35,7 +35,7 @@ namespace CommonTools
          set_points(pts);
         _searchParams.sorted = true;
         _searchParams.cores  = omp_get_max_threads();
-       // _searchParams.max_neighbors = 1;
+        _searchParams.max_neighbors = 3;
     }
 
     template<typename T>

@@ -14,6 +14,7 @@ public:
         moveToThread(this);
         qRegisterMetaType<Eigen::Matrix<float, 7,1>>("Eigen::Matrix<float, 7,1>");
     }
+    
 public slots:  
     void slotCameraInfo(const sensor_msgs::CameraInfo&);
     void slotCvImageRGB(const cv_bridge::CvImagePtr&);

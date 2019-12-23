@@ -1,11 +1,12 @@
 #include "algorithmThread.h"
+#include<QtConcurrent>
 
 
 void CAlgorithimThread::run()
 {
-    TriMesh mesh;
-    OpenMesh::IO::read_mesh(mesh,"tmp/meshout.ply");
-    sigSendMesh(mesh);
+    // TriMesh tmesh ;
+    // OpenMesh::IO::read_mesh(tmesh,"tmp/out.stl");
+    // emit sigSendMesh(tmesh);
     QThread::exec();
 }
 
@@ -24,7 +25,7 @@ void CAlgorithimThread::slotCvImageDepth(const cv_bridge::CvImagePtr& msg)
             return;
         if(sn3dRebuild_.getScanStatus() == ScanStatus::isInitialScan)
         {
-            sn3dRebuild_.getMesh();
+            sn3dRebuild_.processFrame();
             initScanNum_++;
             if(initScanNum_ == 200)
             {
@@ -40,8 +41,13 @@ void CAlgorithimThread::slotCvImageDepth(const cv_bridge::CvImagePtr& msg)
         {
              if(abs(car_curr_t.x()-scan_paths_[curr_path_num_-1][0])<0.5&&
                  abs(car_curr_t.y()-scan_paths_[curr_path_num_-1][1])<0.5)
-                sn3dRebuild_.getMeshAutoScan(curr_rt_);
-
+                {
+                    sn3dRebuild_.getMeshAutoScan(curr_rt_);
+                    //传入渲染
+                    TriMesh  tmesh = sn3dRebuild_.getMesh();
+                    OpenMesh::IO::write_mesh(tmesh,"tmp/out.stl",OpenMesh::IO::Options::Binary);
+                    emit sigSendMesh(tmesh);
+                }
             sn3dRebuild_.setScanStatus(ScanStatus::isWait);
             emit sigGoNext();
         }    
@@ -62,7 +68,14 @@ void CAlgorithimThread::slotInitScan()
 
 void CAlgorithimThread::slotAutoScan()
 {
-    scan_paths_ =  sn3dRebuild_.getScanPath();
+    scan_paths_ =  sn3dRebuild_.getScanPath(
+        [&](const TriMesh&  tmesh  ){
+        //在获得trimesh后马上开线程传入渲染
+         QtConcurrent::run([&]( ){
+             OpenMesh::IO::write_mesh(tmesh,"tmp/out.stl",OpenMesh::IO::Options::Binary);
+            emit sigSendMesh(tmesh);
+         });
+    });
     curr_path_num_ =0;
     emit sigGoNext();
 }

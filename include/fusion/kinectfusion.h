@@ -43,7 +43,7 @@ namespace kinectfusion {
          */
         bool process_frame(const cv::Mat_<float>& depth_map, const cv::Mat_<cv::Vec3b>& color_map);
 
-       std::vector<Eigen::Matrix<float,7,1> >  compute_paths();
+       std::vector<Eigen::Matrix<float,7,1> >  compute_paths(std::function<void(const TriMesh& )>);
 
         bool process_frame_by_rt(const cv::Mat_<float>& depth_map, const cv::Mat_<cv::Vec3b>& color_map, const Eigen::Matrix4f& rt );
 

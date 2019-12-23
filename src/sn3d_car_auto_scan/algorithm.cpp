@@ -13,7 +13,7 @@ void Sn3DAlgorithmRebuild::setCameraInfo(const   sensor_msgs::CameraInfo& camera
     pipeline_  =  new  kinectfusion::Pipeline(camera_parameters,configuration_);
 }
 
-void Sn3DAlgorithmRebuild::getMesh()
+void Sn3DAlgorithmRebuild::processFrame()
 {
     mutex1_.lock();
     pipeline_->process_frame(imgDepth_->image,imgRGB_->image);
@@ -37,9 +37,17 @@ void Sn3DAlgorithmRebuild::getMeshAutoScan(const Eigen::MatrixX4f& rt)
     mutex1_.unlock();
 }
 
-std::vector<Eigen::Matrix<float,7,1> > Sn3DAlgorithmRebuild::getScanPath()
+TriMesh Sn3DAlgorithmRebuild::getMesh()
 {
-    return pipeline_->compute_paths();
+    kinectfusion::SurfaceMesh smesh =  pipeline_->extract_mesh();
+    TriMesh tmesh;
+    kinectfusion::surfacemesh_to_TriMesh(smesh, tmesh);
+    return tmesh;
+}
+
+std::vector<Eigen::Matrix<float,7,1> > Sn3DAlgorithmRebuild::getScanPath(std::function<void(const TriMesh& )> func)
+{
+    return pipeline_->compute_paths(func);
 }
 
 void Sn3DAlgorithmRebuild::pose2RT(const Eigen::Matrix<float,7,1>& pose, Eigen::Matrix4f& rt)
